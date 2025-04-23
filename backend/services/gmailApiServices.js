@@ -33,10 +33,10 @@ async function sendEmail(gmail, email) {
   return res.data;
 }
 
-async function getEmailList(gmail) {
+async function getEmailList(gmail, quantity = 10) {
   const res = await gmail.users.messages.list({
     userId: "me",
-    maxResults: 10,
+    maxResults: quantity,
   });
   const messages = res.data.messages;
   if (messages.length) {

@@ -18,13 +18,16 @@ function App() {
         console.log(err);
       }
     }
-    getEmails(2);
+    getEmails(20);
   }, []);
   return (
     <>
-      {emails.map((email) => (
-        <EmailDisplay emailDetails={email} key={email.id} />
-      ))}
+      <h2 className="text-center m-6 text-3xl">Email Inbox</h2>
+      <div className="flex flex-col gap-10 items-center">
+        {emails.map((email) => (
+          <EmailDisplay emailDetails={email} key={email.id} />
+        ))}
+      </div>
     </>
   );
 }

@@ -1,10 +1,10 @@
-const getGmailApi = require("../gmail-api-test/services/googleApiAuthService");
+const getGmailApi = require("./services/googleApiAuthService");
 const {
   getListOfLabels,
   sendEmail,
   getEmailList,
   getEmailDetails,
-} = require("../gmail-api-test/services/gmailApiServices");
+} = require("./services/gmailApiServices");
 
 async function main() {
   const gmail = await getGmailApi();

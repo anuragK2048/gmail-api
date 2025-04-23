@@ -1,2 +1,4 @@
 .env.local
+.env
 credentials/
+node_modules

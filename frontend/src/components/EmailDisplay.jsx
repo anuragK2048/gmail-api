@@ -97,7 +97,7 @@ function EmailDisplay({ emailDetails }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow">
+    <div className="max-w-4xl mx-2 bg-white rounded-lg shadow">
       {/* Email header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex justify-between items-center mb-1">

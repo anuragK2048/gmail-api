@@ -64,7 +64,7 @@ async function authorize() {
 //Get the Gmail API
 async function getGmailApi() {
   const auth = await authorize();
-  console.log(auth.credentials.refresh_token);
+  // console.log(auth.credentials.refresh_token);
   const gmail = google.gmail({ version: "v1", auth });
   return gmail;
 }

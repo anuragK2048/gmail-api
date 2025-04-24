@@ -25,7 +25,6 @@ app.get("/api/getLabels", async (req, res) => {
 });
 
 app.post("/api/getEmails", async (req, res) => {
-  console.log(req.body);
   const quantity = req.body.quantity;
   const gmail = await getGmailApi();
   if (gmail) {
@@ -41,6 +40,22 @@ app.post("/api/getEmails", async (req, res) => {
       console.error("Error fetching email list:", error);
     }
   }
+});
+
+app.post("/api/ai/summarize", async (req, res) => {
+  res.json({ summary: req.body.emailDetails });
+});
+
+app.post("/api/ai/categorize", async (req, res) => {
+  res.json({ category: req.body.emailDetails });
+});
+
+app.post("/api/ai/extractAction", async (req, res) => {
+  res.json({ action: req.body.emailDetails });
+});
+
+app.post("/api/ai/createDraft", async (req, res) => {
+  res.json({ draft: req.body.emailDetails });
 });
 
 app.listen(PORT, () => {

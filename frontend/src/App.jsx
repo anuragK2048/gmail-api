@@ -26,6 +26,12 @@ function App() {
     }
     getEmails(emailQuantity);
   }, [emailQuantity]);
+
+  function changeSelectedEmail(emailDetails) {
+    setSelectedEmail(emailDetails);
+    setSelectedOption(undefined);
+  }
+
   return (
     <>
       <h2 className="text-center m-6 text-3xl">Email Inbox</h2>
@@ -44,7 +50,10 @@ function App() {
               </option>
             ))}
           </select>
-          <EmailList emails={emails} setSelectedEmail={setSelectedEmail} />
+          <EmailList
+            emails={emails}
+            changeSelectedEmail={changeSelectedEmail}
+          />
         </div>
         {Object.keys(selectedEmail).length !== 0 && (
           <EmailDisplay emailDetails={selectedEmail} />

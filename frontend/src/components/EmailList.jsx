@@ -1,15 +1,15 @@
-function EmailList({ emails, setSelectedEmail }) {
+function EmailList({ emails, changeSelectedEmail }) {
   return (
     <div className="flex flex-col gap-5">
-      {emails.map((emailDetail) => {
+      {emails.map((emailDetails) => {
         return (
           <div
-            key={emailDetail.id}
+            key={emailDetails.id}
             className="flex flex-col gap-1 border-2 border-amber-300 p-2"
-            onClick={() => setSelectedEmail(emailDetail)}
+            onClick={() => changeSelectedEmail(emailDetails)}
           >
-            <div className="emailId">{emailDetail.id}</div>
-            <div className="emailSnippet">{emailDetail.snippet}</div>
+            <div className="emailId">{emailDetails.id}</div>
+            <div className="emailSnippet">{emailDetails.snippet}</div>
           </div>
         );
       })}

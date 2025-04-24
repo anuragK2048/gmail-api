@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 
+const getSummary = require("./llm-ops/summary");
+
 const getGmailApi = require("./services/googleApiAuthService");
 const {
   getListOfLabels,
@@ -43,7 +45,8 @@ app.post("/api/getEmails", async (req, res) => {
 });
 
 app.post("/api/ai/summarize", async (req, res) => {
-  res.json({ summary: req.body.emailDetails });
+  const result = await getSummary(req.body.emailDetails);
+  res.json({ summary: result });
 });
 
 app.post("/api/ai/categorize", async (req, res) => {

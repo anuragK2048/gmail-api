@@ -1,9 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 function DisplayArea({
   emailDetails,
   selectedOption = "Select an Option First",
 }) {
+  const [output, setOutput] = useState("");
+  useEffect(() => {
+    setOutput("");
+  }, [selectedOption]);
   useEffect(() => {
     if (selectedOption === "Summarize") {
       (async function getSummary(emailDetails) {
@@ -13,7 +17,8 @@ function DisplayArea({
           body: JSON.stringify({ emailDetails }),
         });
         const result = await res.json();
-        console.log(result);
+        console.log(result.summary);
+        setOutput(result.summary.summary);
       })(emailDetails);
     }
 
@@ -55,8 +60,10 @@ function DisplayArea({
   }, [selectedOption]);
 
   return (
-    <div className="w-96 flex flex-col bg-slate-400 p-3">
+    <div className="w-96 flex flex-col bg-slate-400 p-3 gap-3">
       <h3 className="text-center text-lg font-semibold">{selectedOption}</h3>
+      <p className="italic">{output}</p>
+      {console.log(selectedOption)}
     </div>
   );
 }

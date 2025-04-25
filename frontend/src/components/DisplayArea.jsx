@@ -24,7 +24,7 @@ function DisplayArea({
 
     if (selectedOption === "Categorize") {
       (async function getCategory(emailDetails) {
-        const res = await fetch("http://localhost:3000/api/ai/summarize", {
+        const res = await fetch("http://localhost:3000/api/ai/categorize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ emailDetails }),

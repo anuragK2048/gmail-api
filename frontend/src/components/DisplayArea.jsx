@@ -24,7 +24,7 @@ function DisplayArea({
 
     if (selectedOption === "Categorize") {
       (async function getCategory(emailDetails) {
-        const res = await fetch("http://localhost:3000/api/ai/categorize", {
+        const res = await fetch("http://localhost:3000/api/ai/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ emailDetails }),
@@ -36,13 +36,14 @@ function DisplayArea({
 
     if (selectedOption === "Extract Action") {
       (async function getAction(emailDetails) {
-        const res = await fetch("http://localhost:3000/api/ai/extractAction", {
+        const res = await fetch("http://localhost:3000/api/ai/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ emailDetails }),
         });
         const result = await res.json();
         console.log(result);
+        setOutput(result.summary.actionItems[0]);
       })(emailDetails);
     }
 

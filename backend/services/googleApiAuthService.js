@@ -68,5 +68,5 @@ async function getGmailApi() {
   const gmail = google.gmail({ version: "v1", auth });
   return gmail;
 }
-
+// getGmailApi();
 module.exports = getGmailApi;

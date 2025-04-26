@@ -1,6 +1,8 @@
 import { useEffect } from "react";
+import { redirect, useNavigate } from "react-router-dom";
 
-function OAuthCallback() {
+function OAuthCallback({ setEmails }) {
+  const navigate = useNavigate();
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
@@ -14,7 +16,8 @@ function OAuthCallback() {
         .then((res) => res.json())
         .then((data) => {
           console.log("User data from backend:", data);
-          // Store tokens/email in state or localStorage as needed
+          setEmails(data.message);
+          navigate("/");
         })
         .catch((err) => console.error("OAuth error:", err));
     }

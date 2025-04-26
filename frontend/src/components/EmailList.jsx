@@ -1,7 +1,7 @@
 function EmailList({ emails, changeSelectedEmail }) {
   return (
-    <div className="flex flex-col gap-5">
-      {emails.map((emailDetails) => {
+    <div className="flex flex-col gap-5 max-h-[60svh] overflow-scroll">
+      {emails?.map((emailDetails) => {
         return (
           <div
             key={emailDetails.id}

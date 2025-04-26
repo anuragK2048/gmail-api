@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-// const getSummary = require("./llm-ops/summary");
+const getSummary = require("./llm-ops/summary");
 
 const getGmailApi = require("./services/googleApiAuthService");
 const {
@@ -45,13 +45,25 @@ app.post("/api/oauth2callback", async (req, res) => {
     // Example: get user's Gmail profile
     const profile = await gmail.users.getProfile({ userId: "me" });
 
-    const messages = await getEmailList(gmail, 5);
+    if (gmail) {
+      try {
+        const messages = await getEmailList(gmail, 10);
+        const messagesContent = messages.map(async (message) => {
+          const details = await getEmailDetails(gmail, message.id);
+          return details;
+        });
+        const results = await Promise.all(messagesContent);
+        res.json({ message: results });
+      } catch (error) {
+        console.error("Error fetching email list:", error);
+      }
+    }
 
-    res.json({
-      email: profile.data.emailAddress,
-      messageIds: messages,
-      tokens, // you can store these securely
-    });
+    // res.json({
+    //   email: profile.data.emailAddress,
+    //   messageIds: messages,
+    //   tokens,
+    // });
   } catch (error) {
     console.error("Error exchanging code:", error);
     res.status(500).json({ error: "Failed to authenticate with Google" });
@@ -60,50 +72,50 @@ app.post("/api/oauth2callback", async (req, res) => {
 
 //-------
 
-// app.get("/api/getLabels", async (req, res) => {
-//   const gmail = await getGmailApi();
-//   if (gmail) {
-//     const labels = await getListOfLabels(gmail);
-//     res.json({ message: labels });
-//   } else {
-//     console.error("Failed to get Gmail API");
-//   }
-// });
+app.get("/api/getLabels", async (req, res) => {
+  const gmail = await getGmailApi();
+  if (gmail) {
+    const labels = await getListOfLabels(gmail);
+    res.json({ message: labels });
+  } else {
+    console.error("Failed to get Gmail API");
+  }
+});
 
-// app.post("/api/getEmails", async (req, res) => {
-//   const quantity = req.body.quantity;
-//   const gmail = await getGmailApi();
-//   if (gmail) {
-//     try {
-//       const messages = await getEmailList(gmail, quantity);
-//       const messagesContent = messages.map(async (message) => {
-//         const details = await getEmailDetails(gmail, message.id);
-//         return details;
-//       });
-//       const results = await Promise.all(messagesContent);
-//       res.json({ message: results });
-//     } catch (error) {
-//       console.error("Error fetching email list:", error);
-//     }
-//   }
-// });
+app.post("/api/getEmails", async (req, res) => {
+  const quantity = req.body.quantity;
+  const gmail = await getGmailApi();
+  if (gmail) {
+    try {
+      const messages = await getEmailList(gmail, quantity);
+      const messagesContent = messages.map(async (message) => {
+        const details = await getEmailDetails(gmail, message.id);
+        return details;
+      });
+      const results = await Promise.all(messagesContent);
+      res.json({ message: results });
+    } catch (error) {
+      console.error("Error fetching email list:", error);
+    }
+  }
+});
 
-// app.post("/api/ai/summarize", async (req, res) => {
-//   const result = await getSummary(req.body.emailDetails);
-//   res.json({ summary: result });
-// });
+app.post("/api/ai/summarize", async (req, res) => {
+  const result = await getSummary(req.body.emailDetails);
+  res.json({ summary: result });
+});
 
-// app.post("/api/ai/categorize", async (req, res) => {
-//   res.json({ category: req.body.emailDetails });
-// });
+app.post("/api/ai/categorize", async (req, res) => {
+  res.json({ category: req.body.emailDetails });
+});
 
-// app.post("/api/ai/extractAction", async (req, res) => {
-//   res.json({ action: req.body.emailDetails });
-// });
+app.post("/api/ai/extractAction", async (req, res) => {
+  res.json({ action: req.body.emailDetails });
+});
 
-// app.post("/api/ai/createDraft", async (req, res) => {
-//   res.json({ draft: req.body.emailDetails });
-// });
+app.post("/api/ai/createDraft", async (req, res) => {
+  res.json({ draft: req.body.emailDetails });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

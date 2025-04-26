@@ -11,7 +11,7 @@ function App() {
   const [emails, setEmails] = useState([]);
   const [selectedEmail, setSelectedEmail] = useState({});
   const [selectedOption, setSelectedOption] = useState(undefined);
-  const [emailQuantity, setEmailQuantity] = useState(4);
+  const [emailQuantity, setEmailQuantity] = useState(10);
   useEffect(() => {
     async function getEmails(quantity) {
       try {
@@ -77,7 +77,10 @@ function App() {
               </>
             }
           />
-          <Route path="/oauth2callback" element={<OAuthCallback />} />
+          <Route
+            path="/oauth2callback"
+            element={<OAuthCallback setEmails={setEmails} />}
+          />
         </Routes>
       </Router>
     </>

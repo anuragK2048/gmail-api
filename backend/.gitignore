@@ -2,3 +2,5 @@
 .env
 credentials/
 node_modules
+/dist
+data/

@@ -11,22 +11,22 @@ function App() {
   const [emails, setEmails] = useState([]);
   const [selectedEmail, setSelectedEmail] = useState({});
   const [selectedOption, setSelectedOption] = useState(undefined);
-  const [emailQuantity, setEmailQuantity] = useState(10);
+  const [emailQuantity, setEmailQuantity] = useState(20);
   useEffect(() => {
-    async function getEmails(quantity) {
-      try {
-        const res = await fetch("http://localhost:3000/api/getEmails", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ quantity }),
-        });
-        const content = await res.json();
-        // console.log(content);
-        setEmails(content.message);
-      } catch (err) {
-        console.log(err);
-      }
-    }
+    // async function getEmails(quantity) {
+    //   try {
+    //     const res = await fetch("http://localhost:3000/api/getEmails", {
+    //       method: "POST",
+    //       headers: { "Content-Type": "application/json" },
+    //       body: JSON.stringify({ quantity }),
+    //     });
+    //     const content = await res.json();
+    //     console.log(content);
+    //     setEmails(content.message);
+    //   } catch (err) {
+    //     console.log(err);
+    //   }
+    // }
     // getEmails(emailQuantity);
   }, [emailQuantity]);
 
@@ -81,6 +81,8 @@ function App() {
             path="/oauth2callback"
             element={<OAuthCallback setEmails={setEmails} />}
           />
+          <Route path="/dashboard" element={<div>Login Successfull</div>} />
+          <Route path="/login-failed" element={<div>Login Error ....</div>} />
         </Routes>
       </Router>
     </>

@@ -6,6 +6,7 @@ function OAuthCallback({ setEmails }) {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get("code");
+    console.log(code);
 
     if (code) {
       fetch("http://localhost:3000/api/oauth2callback", {

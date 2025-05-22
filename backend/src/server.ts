@@ -22,14 +22,9 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-//-------
-
-// const { google } = require("googleapis");
-
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const REDIRECT_URI = process.env.REDIRECT_URI;
-console.log(CLIENT_ID);
 
 const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,

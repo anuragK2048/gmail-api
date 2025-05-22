@@ -4,10 +4,10 @@ import session from "express-session";
 import helmet from "helmet"; //for security header
 import morgan from "morgan"; //HTTP request logger
 import { NODE_ENV, SESSION_SECRET, FRONTEND_URL, CORS_ORIGINS } from "./config";
-import { redisStore } from "./config/redis";
+import { redisStore } from "./config";
 import apiRoutes from "./api/routes";
-import { globalErrorHandler } from "./middleware/errorHandler";
-import { NotFoundError } from "./utils/errors"; // A custom error class
+// import { globalErrorHandler } from "./middleware/errorHandler";
+// import { NotFoundError } from "./utils/errors"; // A custom error class
 import { nextTick } from "process";
 
 const app: Application = express();
@@ -58,15 +58,15 @@ declare module "express-session" {
 }
 
 //API Routes
-app.get("/", (req: Request, res: Response) => res.send("API Healthy"));
+app.get("/", (req: Request, res: any) => res.send("API Healthy"));
 app.use("/api/v1", apiRoutes);
 
 // --- 404 Handler for API routes ---
-app.all("/api/*", (req: Request, res: Response, next: NextFunction) => {
-  next(new NotFoundError(`Can't find ${req.originalUrl} on this server!`));
-});
+// app.all("/api/*", (req: Request, res: Response, next: NextFunction) => {
+//   next(new NotFoundError(`Can't find ${req.originalUrl} on this server!`));
+// });
 
 //Global Error Handler Middleware
-app.use(globalErrorHandler);
+// app.use(globalErrorHandler);
 
 export default app;

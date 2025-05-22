@@ -1,9 +1,9 @@
 import { createClient, RedisClientType } from "redis";
-import RedisStore from "connect-redis";
+import { RedisStore } from "connect-redis";
 import { REDIS_URL, NODE_ENV } from "./environment";
 
 let redisClient: RedisClientType;
-let redisStore: RedisStore;
+let redisStore: any;
 
 const initializeRedis = async () => {
   if (!REDIS_URL && NODE_ENV !== "test") {

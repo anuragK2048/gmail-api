@@ -3,7 +3,7 @@ import cors from "cors";
 import session from "express-session";
 import helmet from "helmet"; //for security header
 import morgan from "morgan"; //HTTP request logger
-import { NODE_ENV, SESSION_SECRET, FRONTEND_URL, CORS_ORIGINS } from "./config";
+import { NODE_ENV, SESSION_SECRET, FRONTEND_URL } from "./config";
 import { redisStore } from "./config";
 import apiRoutes from "./api/routes";
 // import { globalErrorHandler } from "./middleware/errorHandler";
@@ -14,7 +14,7 @@ const app: Application = express();
 
 //Core middleware
 const corsOptions = {
-  origin: CORS_ORIGINS || FRONTEND_URL || true,
+  origin: FRONTEND_URL || true,
   credentials: true,
 };
 app.use(cors(corsOptions));
@@ -49,11 +49,6 @@ declare module "express-session" {
   interface SessionData {
     userId?: string;
     isLoggedIn?: boolean;
-    oauthFlowContent?: {
-      csrfToken?: string;
-      action?: string;
-      appUserId?: string;
-    };
   }
 }
 

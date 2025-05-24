@@ -12,20 +12,20 @@ router.get("/google", authController.redirectToGoogle);
 // GET /api/v1/auth/google/callback
 router.get("/google/callback", authController.handleGoogleCallback);
 
-// Route to get current authentication status
-// GET /api/v1/auth/status
-router.get("/status", isAuthenticated, authController.getAuthStatus); // Protected by isAuthenticated
+// // Route to get current authentication status
+// // GET /api/v1/auth/status
+// router.get("/status", isAuthenticated, authController.getAuthStatus); // Protected by isAuthenticated
 
-// Route for user logout
-// POST /api/v1/auth/logout
-router.post("/logout", isAuthenticated, authController.logoutUser); // Protected
+// // Route for user logout
+// // POST /api/v1/auth/logout
+// router.post("/logout", isAuthenticated, authController.logoutUser); // Protected
 
-// Route to initiate linking another Gmail account (example, assuming user is already logged in)
-// POST /api/v1/auth/google/link
-router.post(
-  "/google/link",
-  isAuthenticated,
-  authController.initiateLinkGoogleAccount
-);
+// // Route to initiate linking another Gmail account (example, assuming user is already logged in)
+// // POST /api/v1/auth/google/link
+// router.post(
+//   "/google/link",
+//   isAuthenticated,
+//   authController.initiateLinkGoogleAccount
+// );
 
 export default router;

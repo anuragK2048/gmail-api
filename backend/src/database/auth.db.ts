@@ -1,6 +1,6 @@
-import supabase from "../supabase";
+import supabase from "./supabase";
 
-async function createUser(
+export async function createUser(
   full_name: string,
   remember_me_token: string,
   gmail_accounts: string[],
@@ -20,13 +20,16 @@ async function createUser(
     ])
     .select();
   console.log(data);
-  if (error) console.log(error);
+  if (error) {
+    console.log(error);
+    throw new Error("Unable to enter user details in database");
+  }
 }
 
-createUser(
-  "john doe",
-  "uias98n2",
-  ["winzoneg3@gmail.com"],
-  "winzoneg3@gmail.com",
-  "iuas89x"
-);
+// createUser(
+//   "john doe",
+//   "uias98n2",
+//   ["winzoneg3@gmail.com"],
+//   "winzoneg3@gmail.com",
+//   "iuas89x"
+// );

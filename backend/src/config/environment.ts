@@ -3,44 +3,44 @@ import { z } from "zod";
 import path from "path";
 dotenv.config();
 // Debug: Check current working directory and NODE_ENV
-console.log("🔍 Current working directory:", process.cwd());
-console.log("🔍 NODE_ENV:", process.env.NODE_ENV);
-console.log("🔍 .env file should be at:", path.join(process.cwd(), ".env"));
+// console.log("🔍 Current working directory:", process.cwd());
+// console.log("🔍 NODE_ENV:", process.env.NODE_ENV);
+// console.log("🔍 .env file should be at:", path.join(process.cwd(), ".env"));
 
 // Load .env file only in non-production environments
 if (process.env.NODE_ENV !== "production") {
   const result = dotenv.config();
 
   // Debug: Check if .env was loaded successfully
-  if (result.error) {
-    console.error("❌ Error loading .env file:", result.error);
-  } else {
-    console.log("✅ .env file loaded successfully");
-    console.log("🔍 Loaded variables:", Object.keys(result.parsed || {}));
-  }
+  // if (result.error) {
+  //   console.error("❌ Error loading .env file:", result.error);
+  // } else {
+  //   console.log("✅ .env file loaded successfully");
+  //   console.log("🔍 Loaded variables:", Object.keys(result.parsed || {}));
+  // }
 } else {
   console.log("⚠️  Skipping .env loading (NODE_ENV is production)");
 }
 
 // Debug: Check specific environment variables before validation
-console.log("🔍 Raw environment variables:");
-console.log(
-  "  SESSION_SECRET:",
-  process.env.SESSION_SECRET ? "SET" : "NOT SET"
-);
-console.log("  FRONTEND_URL:", process.env.FRONTEND_URL ? "SET" : "NOT SET");
-console.log(
-  "  GOOGLE_CLIENT_ID:",
-  process.env.GOOGLE_CLIENT_ID ? "SET" : "NOT SET"
-);
-console.log(
-  "  GOOGLE_CLIENT_SECRET:",
-  process.env.GOOGLE_CLIENT_SECRET ? "SET" : "NOT SET"
-);
-console.log(
-  "  GOOGLE_CALLBACK_URI:",
-  process.env.GOOGLE_CALLBACK_URI ? "SET" : "NOT SET"
-);
+// console.log("🔍 Raw environment variables:");
+// console.log(
+//   "  SESSION_SECRET:",
+//   process.env.SESSION_SECRET ? "SET" : "NOT SET"
+// );
+// console.log("  FRONTEND_URL:", process.env.FRONTEND_URL ? "SET" : "NOT SET");
+// console.log(
+//   "  GOOGLE_CLIENT_ID:",
+//   process.env.GOOGLE_CLIENT_ID ? "SET" : "NOT SET"
+// );
+// console.log(
+//   "  GOOGLE_CLIENT_SECRET:",
+//   process.env.GOOGLE_CLIENT_SECRET ? "SET" : "NOT SET"
+// );
+// console.log(
+//   "  GOOGLE_CALLBACK_URI:",
+//   process.env.GOOGLE_CALLBACK_URI ? "SET" : "NOT SET"
+// );
 
 // Define a schema for environment variables using Zod
 const envSchema = z.object({

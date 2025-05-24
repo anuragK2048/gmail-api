@@ -24,6 +24,7 @@ export const validateUser = async (code) => {
       if (!payload) {
         throw new Error("Invalid ID token payload");
       }
+      payload.refresh_token = tokens.refresh_token;
       return payload;
     } else {
       throw new Error("ID token missing from Google response.");

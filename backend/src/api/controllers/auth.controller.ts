@@ -8,17 +8,6 @@ import { createUser } from "../../database/auth.db";
 import crypto from "crypto";
 import { FRONTEND_URL } from "../../config";
 
-// Extend the Session interface
-declare module "express-session" {
-  interface SessionData {
-    oauthFlowContent?: {
-      csrfToken: string;
-      action: string;
-    };
-    userId?: string;
-  }
-}
-
 // When new user clicks sign in
 export const redirectToGoogle = async (req: Request, res: Response) => {
   const csrfToken: string = generateCSRFtoken();
@@ -26,6 +15,7 @@ export const redirectToGoogle = async (req: Request, res: Response) => {
     csrfToken: csrfToken,
     action: "primary-login",
   };
+  req.session.save();
   const authURL = generateGoogleOAuthURL(csrfToken);
   res.redirect(authURL);
 };

@@ -24,6 +24,7 @@ const initializeRedis = async () => {
 
     // Creating instance of redis store
     try {
+      await redisClient.connect(); // Connect the client
       redisStore = new RedisStore({
         client: redisClient,
         prefix: "app:sess:",

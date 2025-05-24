@@ -9,7 +9,11 @@ import crypto from "crypto";
 import { FRONTEND_URL } from "../../config";
 import { GmailAccount, NewGmailAccountPayload } from "../../types/gmail.types";
 import { NewUserAccountPayload, User } from "../../types/user.types";
-import { createEmailAccount } from "../../database/gmail_accounts.db";
+import {
+  createEmailAccount,
+  duplicateAccountCheck,
+} from "../../database/gmail_accounts.db";
+import { ValidatedUser } from "../../types/auth.types";
 
 // When new user clicks sign in
 export const redirectToGoogle = async (req: Request, res: Response) => {
@@ -40,7 +44,7 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
         email: primary_email,
         sub: google_id,
         refresh_token: refresh_token_encrypted,
-      } = await validateUser(code);
+      }: ValidatedUser = await validateUser(code);
       if (req.session.oauthFlowContent.action == "register_new_user") {
         const newUserAccountPayload: NewUserAccountPayload = {
           full_name,
@@ -63,7 +67,10 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
         req.session.isLoggedIn = true;
         delete req.session.oauthFlowContent;
         res.redirect(FRONTEND_URL);
-      } else if (req.session.userId) {
+      } else if (
+        req.session.userId &&
+        req.session.oauthFlowContent.action == "link_new_gmail_account"
+      ) {
         const newGmailDetails: NewGmailAccountPayload = {
           gmail_name: full_name,
           app_user_id: req.session.userId,
@@ -71,16 +78,23 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
           gmail_address: primary_email,
           refresh_token_encrypted,
         };
-        try {
-          const gmailAccountData: GmailAccount = await createEmailAccount(
-            newGmailDetails
-          );
+        if (!(await duplicateAccountCheck(google_id))) {
+          try {
+            const gmailAccountData: GmailAccount = await createEmailAccount(
+              newGmailDetails
+            );
+            res.redirect(
+              FRONTEND_URL + `/inbox?selectedAccountId=${gmailAccountData.id}`
+            );
+          } catch (err) {
+            console.error("Error in creating new gmail row in DB", err);
+            res.redirect(FRONTEND_URL + "-error" + `?${err}`);
+          }
+        } else {
+          console.error(`${primary_email} already exist with this user`);
           res.redirect(
-            FRONTEND_URL + `/inbox?selectedAccountId=${gmailAccountData.id}`
+            FRONTEND_URL + "-error" + `?${primary_email} already exist with you`
           );
-        } catch (err) {
-          console.error("Error in creating new gmail row in DB", err);
-          res.redirect(FRONTEND_URL + "-error" + `?${err}`);
         }
       }
     } catch (err) {

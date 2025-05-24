@@ -17,3 +17,12 @@ export const createEmailAccount = async (
   const [dataObj] = data;
   return dataObj;
 };
+
+export const duplicateAccountCheck = async (google_id: string) => {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("google_id", google_id)
+    .single(); // Optional: use .single() if you expect only 1 result
+  return data ? true : false;
+};

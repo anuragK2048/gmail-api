@@ -4,9 +4,12 @@ import {
   generateGoogleOAuthURL,
   validateUser,
 } from "../../services/auth.service";
-import { createUser } from "../../database/auth.db";
+import { createUser } from "../../database/users.db";
 import crypto from "crypto";
 import { FRONTEND_URL } from "../../config";
+import { GmailAccount, NewGmailAccountPayload } from "../../types/gmail.types";
+import { NewUserAccountPayload, User } from "../../types/user.types";
+import { createEmailAccount } from "../../database/gmail_accounts.db";
 
 // When new user clicks sign in
 export const redirectToGoogle = async (req: Request, res: Response) => {
@@ -25,13 +28,37 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
     console.log("Error in callback URL(not enough details)");
     res.json({ message: "Error in callback URL(not enough details)" });
   }
-  const { state, code } = req.query;
-  if (state == req.session.oauthFlowContent.csrfToken) {
+  const { state, code }: { state?: string; code?: string } = req.query;
+  if (
+    req.session.oauthFlowContent &&
+    state == req.session.oauthFlowContent.csrfToken
+  ) {
     // State verified
     try {
-      const { name, email, sub } = await validateUser(code);
-      await createUser(name, "", [email], email, sub); // D.B.
+      const {
+        name: full_name,
+        email: primary_email,
+        sub: google_id,
+        refresh_token: refresh_token_encrypted,
+      } = await validateUser(code);
+      const newUserAccountPayload: NewUserAccountPayload = {
+        full_name,
+        gmail_accounts: [primary_email],
+        primary_email,
+        google_id,
+      };
+      const userData: User = await createUser(newUserAccountPayload); // D.B.
+      const newGmailDetails: NewGmailAccountPayload = {
+        app_user_id: userData.id,
+        google_user_id_for_account: userData.google_id,
+        gmail_address: userData.primary_email,
+        refresh_token_encrypted,
+      };
+      const gmailAccountData: GmailAccount = await createEmailAccount(
+        newGmailDetails
+      );
       req.session.userId = crypto.randomBytes(16).toString("hex");
+      req.session.isLoggedIn = true;
       res.redirect(FRONTEND_URL);
     } catch (err) {
       console.error("Unable to validate user: ", err);

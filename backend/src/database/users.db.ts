@@ -1,29 +1,20 @@
+import { NewUserAccountPayload, User } from "../types/user.types";
+
 import supabase from "./supabase";
 
 export async function createUser(
-  full_name: string,
-  remember_me_token: string,
-  gmail_accounts: string[],
-  primary_email: string,
-  google_id: string
-) {
+  newUserDetails: NewUserAccountPayload
+): Promise<User> {
   const { data, error } = await supabase
     .from("users")
-    .insert([
-      {
-        full_name: full_name,
-        remember_me_token: remember_me_token,
-        gmail_accounts: gmail_accounts,
-        primary_email: primary_email,
-        google_id: google_id,
-      },
-    ])
+    .insert([newUserDetails])
     .select();
   console.log(data);
   if (error) {
     console.log(error);
     throw new Error("Unable to enter user details in database");
   }
+  return data;
 }
 
 // createUser(

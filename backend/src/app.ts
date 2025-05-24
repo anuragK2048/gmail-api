@@ -23,6 +23,7 @@ declare module "express-session" {
       csrfToken: string;
       action: string;
     };
+    isLoggedIn?: boolean;
   }
 }
 

@@ -11,7 +11,7 @@ export const generateGoogleOAuthURL = (csrfToken: string) => {
   return authorizationUrl;
 };
 
-export const validateUser = async (code) => {
+export const validateUser = async (code?: string) => {
   try {
     const { tokens } = await baseOauth2Client.getToken(code);
     baseOauth2Client.setCredentials(tokens);

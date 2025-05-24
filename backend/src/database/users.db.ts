@@ -14,7 +14,8 @@ export async function createUser(
     console.log(error);
     throw new Error("Unable to enter user details in database");
   }
-  return data;
+  const [dataObj] = data;
+  return dataObj;
 }
 
 // createUser(

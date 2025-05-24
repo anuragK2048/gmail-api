@@ -16,7 +16,7 @@ export const redirectToGoogle = async (req: Request, res: Response) => {
   const csrfToken: string = generateCSRFtoken();
   req.session.oauthFlowContent = {
     csrfToken: csrfToken,
-    action: "primary-login",
+    action: "register_new_user",
   };
   req.session.save();
   const authURL = generateGoogleOAuthURL(csrfToken);
@@ -41,30 +41,55 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
         sub: google_id,
         refresh_token: refresh_token_encrypted,
       } = await validateUser(code);
-      const newUserAccountPayload: NewUserAccountPayload = {
-        full_name,
-        gmail_accounts: [primary_email],
-        primary_email,
-        google_id,
-      };
-      const userData: User = await createUser(newUserAccountPayload); // D.B.
-      const newGmailDetails: NewGmailAccountPayload = {
-        app_user_id: userData.id,
-        google_user_id_for_account: userData.google_id,
-        gmail_address: userData.primary_email,
-        refresh_token_encrypted,
-      };
-      const gmailAccountData: GmailAccount = await createEmailAccount(
-        newGmailDetails
-      );
-      req.session.userId = crypto.randomBytes(16).toString("hex");
-      req.session.isLoggedIn = true;
-      res.redirect(FRONTEND_URL);
+      if (req.session.oauthFlowContent.action == "register_new_user") {
+        const newUserAccountPayload: NewUserAccountPayload = {
+          full_name,
+          gmail_accounts: [primary_email],
+          primary_email,
+          google_id,
+        };
+        const userData: User = await createUser(newUserAccountPayload); // D.B.
+        const newGmailDetails: NewGmailAccountPayload = {
+          gmail_name: userData.full_name,
+          app_user_id: userData.id,
+          google_user_id_for_account: userData.google_id,
+          gmail_address: userData.primary_email,
+          refresh_token_encrypted,
+        };
+        const gmailAccountData: GmailAccount = await createEmailAccount(
+          newGmailDetails
+        );
+        req.session.userId = userData.id;
+        req.session.isLoggedIn = true;
+        delete req.session.oauthFlowContent;
+        res.redirect(FRONTEND_URL);
+      } else if (req.session.userId) {
+        const newGmailDetails: NewGmailAccountPayload = {
+          gmail_name: full_name,
+          app_user_id: req.session.userId,
+          google_user_id_for_account: google_id,
+          gmail_address: primary_email,
+          refresh_token_encrypted,
+        };
+        try {
+          const gmailAccountData: GmailAccount = await createEmailAccount(
+            newGmailDetails
+          );
+          res.redirect(
+            FRONTEND_URL + `/inbox?selectedAccountId=${gmailAccountData.id}`
+          );
+        } catch (err) {
+          console.error("Error in creating new gmail row in DB", err);
+          res.redirect(FRONTEND_URL + "-error" + `?${err}`);
+        }
+      }
     } catch (err) {
-      console.error("Unable to validate user: ", err);
-      res.status(500).json({ message: "Unable to validate user" });
+      console.error("Unable to validate user account: ", err);
+      res.redirect(FRONTEND_URL + "-error" + `?${err}`);
+      res.status(500).json({ message: "Unable to validate gmail account" });
     }
   }
+  res.redirect(FRONTEND_URL + "-error");
   res.status(500).json({ message: "Cant verify URL state" });
 };
 
@@ -76,9 +101,16 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
 //   res.json({});
 // };
 
-// export const initiateLinkGoogleAccount = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   res.json({});
-// };
+export const initiateLinkGoogleAccount = async (
+  req: Request,
+  res: Response
+) => {
+  const csrfToken: string = generateCSRFtoken();
+  req.session.oauthFlowContent = {
+    csrfToken: csrfToken,
+    action: "link_new_gmail_account",
+  };
+  req.session.save();
+  const authURL = generateGoogleOAuthURL(csrfToken);
+  res.redirect(authURL);
+};

@@ -21,11 +21,11 @@ router.get("/google/callback", authController.handleGoogleCallback);
 // router.post("/logout", isAuthenticated, authController.logoutUser); // Protected
 
 // // Route to initiate linking another Gmail account (example, assuming user is already logged in)
-// // POST /api/v1/auth/google/link
-// router.post(
-//   "/google/link",
-//   isAuthenticated,
-//   authController.initiateLinkGoogleAccount
-// );
+// POST /api/v1/auth/google/link
+router.get(
+  "/google/link",
+  isAuthenticated,
+  authController.initiateLinkGoogleAccount
+);
 
 export default router;

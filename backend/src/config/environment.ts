@@ -66,8 +66,8 @@ const envSchema = z.object({
     .string()
     .url("Google Callback URI must be a valid URL"),
   DATABASE_URL: z.string().url().optional(),
-  SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 });
 

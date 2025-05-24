@@ -5,6 +5,7 @@ export interface NewGmailAccountPayload {
   app_user_id: UUID;
   google_user_id_for_account: string;
   gmail_address: string;
+  gmail_name: string;
   refresh_token_encrypted: string;
   scopes_granted?: string[];
 }
@@ -21,7 +22,6 @@ export interface GmailAccount extends NewGmailAccountPayload {
 /* 
 // src/types/auth.types.ts
 Type Aliases (type)
-export type OAuthFlowAction = 'register_new_user' | 'link_new_gmail_account' | 'reauthenticate';
 
 export interface OAuthFlowContext {
   action: OAuthFlowAction;

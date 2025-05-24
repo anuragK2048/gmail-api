@@ -13,5 +13,7 @@ export const createEmailAccount = async (
     // Handle error appropriately, maybe throw it or return a structured error response
     throw error;
   }
-  return data;
+  console.log(data);
+  const [dataObj] = data;
+  return dataObj;
 };

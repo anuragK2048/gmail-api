@@ -14,14 +14,16 @@ import apiRoutes from "./api/routes";
 // import { globalErrorHandler } from "./middleware/errorHandler";
 // import { NotFoundError } from "./utils/errors"; // A custom error class
 import { nextTick } from "process";
+import { OAuthFlowAction } from "./types/auth.types";
+import { UUID } from "crypto";
 
 // typescript
 declare module "express-session" {
   interface SessionData {
-    userId?: string;
+    userId?: UUID;
     oauthFlowContent?: {
       csrfToken: string;
-      action: string;
+      action: OAuthFlowAction;
     };
     isLoggedIn?: boolean;
   }
@@ -69,14 +71,14 @@ async function initializeApp() {
     })
   );
 
-  app.get("/set", (req, res) => {
-    req.session.userId = "1234";
-    req.session.save();
-    res.json({ mes: "succ" });
-  });
-  app.get("/get", (req, res) => {
-    res.json({ userId: req.session.userId || "Not set" });
-  });
+  // app.get("/set", (req, res) => {
+  //   req.session.userId = "1234";
+  //   req.session.save();
+  //   res.json({ mes: "succ" });
+  // });
+  // app.get("/get", (req, res) => {
+  //   res.json({ userId: req.session.userId || "Not set" });
+  // });
 
   //API Routes
   app.get("/", (req: Request, res: any) => res.send("API Healthy"));

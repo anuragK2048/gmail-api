@@ -78,7 +78,9 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
           gmail_address: primary_email,
           refresh_token_encrypted,
         };
-        if (!(await duplicateAccountCheck(google_id))) {
+        // if (!(await duplicateAccountCheck(google_id))) {  // It should return false //TODO
+        if (true) {
+          // It should return false
           try {
             const gmailAccountData: GmailAccount = await createEmailAccount(
               newGmailDetails
@@ -100,20 +102,18 @@ export const handleGoogleCallback = async (req: Request, res: Response) => {
     } catch (err) {
       console.error("Unable to validate user account: ", err);
       res.redirect(FRONTEND_URL + "-error" + `?${err}`);
-      res.status(500).json({ message: "Unable to validate gmail account" });
     }
   }
   res.redirect(FRONTEND_URL + "-error");
-  res.status(500).json({ message: "Cant verify URL state" });
 };
 
 // export const getAuthStatus = async (req: Request, res: Response) => {
 //   res.json({});
 // };
 
-// export const logoutUser = async (req: Request, res: Response) => {
-//   res.json({});
-// };
+export const logoutUser = async (req: Request, res: Response) => {
+  res.json({});
+};
 
 export const initiateLinkGoogleAccount = async (
   req: Request,

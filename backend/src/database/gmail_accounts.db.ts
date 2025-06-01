@@ -1,3 +1,4 @@
+import { BadRequestError } from "../errors/specificErrors";
 import { GmailAccount, NewGmailAccountPayload } from "../types/gmail.types";
 import supabase from "./supabase";
 
@@ -9,9 +10,8 @@ export const createEmailAccount = async (
     .insert([newGmailDetails])
     .select();
   if (error) {
-    console.error("Error creating email account:", error);
-    // Handle error appropriately, maybe throw it or return a structured error response
-    throw error;
+    console.log(error);
+    throw new BadRequestError("Invalid user data provided.", "DB_ENTRY_ERROR");
   }
   console.log(data);
   const [dataObj] = data;
@@ -20,9 +20,18 @@ export const createEmailAccount = async (
 
 export const duplicateAccountCheck = async (google_id: string) => {
   const { data, error } = await supabase
-    .from("users")
+    .from("gmail_accounts")
     .select("*")
-    .eq("google_id", google_id)
+    .eq("google_user_id_for_account", google_id)
     .single(); // Optional: use .single() if you expect only 1 result
-  return data ? true : false;
+  // if (error) {
+  //   console.error(error);
+  //   throw new BadRequestError(
+  //     "Unable to check duplicate accounts",
+  //     "DB_CHECK_ERROR"
+  //   );
+  // }
+  if (data) {
+    return data; // object
+  } else return false;
 };

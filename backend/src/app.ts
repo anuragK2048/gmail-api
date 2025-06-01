@@ -16,6 +16,7 @@ import apiRoutes from "./api/routes";
 import { nextTick } from "process";
 import { OAuthFlowAction } from "./types/auth.types";
 import { UUID } from "crypto";
+import errorHandler from "./middleware/errorHandler";
 
 // typescript
 declare module "express-session" {
@@ -90,7 +91,7 @@ async function initializeApp() {
   // });
 
   //Global Error Handler Middleware
-  // app.use(globalErrorHandler);
+  app.use(errorHandler);
   return app;
 }
 

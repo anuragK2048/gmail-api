@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from "express";
+import { asyncWrapper } from "./asyncWrapper";
+import { UnauthorizedError } from "../errors/specificErrors";
 
-export const isAuthenticated = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
-  if (req.session && req.session.userId && req.session.isLoggedIn)
-    return next();
-  else res.status(401).json({ message: "Unauthorized." });
-};
+export const isAuthenticated = asyncWrapper(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (req.session && req.session.userId && req.session.isLoggedIn)
+      return next();
+    else throw new UnauthorizedError("User not authorized", "AUTH_ERROR");
+  }
+);

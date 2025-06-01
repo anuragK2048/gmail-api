@@ -1,8 +1,7 @@
 export type OAuthFlowAction =
-  | "register_new_user"
+  | "register_new_user/login"
   | "link_new_gmail_account"
-  | "reauthenticate"
-  | "login";
+  | "reauthenticate";
 
 export interface ValidatedUser {
   name: string;

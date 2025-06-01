@@ -8,7 +8,7 @@ const router: Router = express.Router();
 // GET /api/v1/auth/google
 router.get("/google", authController.redirectToGoogle);
 
-// Route for Google OAuth callback
+// Route for Google OAuth callback (req comes from google)
 // GET /api/v1/auth/google/callback
 router.get("/google/callback", authController.handleGoogleCallback);
 
@@ -27,5 +27,9 @@ router.get(
   isAuthenticated,
   authController.initiateLinkGoogleAccount
 );
+
+// Route to login
+// GET /api/v1/auth/login
+router.get("login", authController.redirectToGoogle);
 
 export default router;

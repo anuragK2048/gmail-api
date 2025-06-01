@@ -17,7 +17,7 @@ router.get("/me", userController.getCurrentUserProfile);
 // router.put('/me', validateRequest(updateUserProfileSchema), userController.updateCurrentUserProfile);
 
 // DELETE /api/v1/users/me (Delete current logged-in user's account - careful with this!)
-// router.delete('/me', userController.deleteCurrentUserAccount);
+router.delete("/me", userController.deleteCurrentUserAccount);
 
 // POST /api/v1/users/preferences (Update user-specific application preferences)
 // router.post('/preferences', userController.updateUserPreferences);

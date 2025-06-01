@@ -78,6 +78,7 @@ export const handleGoogleCallback = asyncWrapper(
       // Check if this Google account (googleUser.sub) is already linked to ANY app_user
       const existingGmailLink = await duplicateAccountCheck(google_id);
       if (existingGmailLink) {
+        console.log("LOGIN");
         // Login
         req.session.userId = existingGmailLink.app_user_id;
         req.session.isLoggedIn = true;
@@ -87,6 +88,7 @@ export const handleGoogleCallback = asyncWrapper(
         );
       } else {
         // Register new user
+        console.log("REGISTERING NEW USER");
         const newUserAccountPayload: NewUserAccountPayload = {
           full_name,
           gmail_accounts: [new_email],

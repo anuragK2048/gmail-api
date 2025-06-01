@@ -19,6 +19,12 @@ export interface GmailAccount extends NewGmailAccountPayload {
   sync_error_message?: string;
 }
 
+export interface GmailAccountWithToken {
+  id: UUID;
+  gmail_address: string;
+  refresh_token_encrypted: string;
+}
+
 /* 
 // src/types/auth.types.ts
 Type Aliases (type)

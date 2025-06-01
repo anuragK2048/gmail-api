@@ -1,5 +1,10 @@
-import { BadRequestError } from "../errors/specificErrors";
-import { GmailAccount, NewGmailAccountPayload } from "../types/gmail.types";
+import { UUID } from "crypto";
+import { BadRequestError, InternalServerError } from "../errors/specificErrors";
+import {
+  GmailAccount,
+  GmailAccountWithToken,
+  NewGmailAccountPayload,
+} from "../types/gmail.types";
 import supabase from "./supabase";
 
 export const createEmailAccount = async (
@@ -34,4 +39,21 @@ export const duplicateAccountCheck = async (google_id: string) => {
   if (data) {
     return data; // object
   } else return false;
+};
+
+export const getAllConnectedAccountTokenDetails = async (
+  appUserId: UUID
+): Promise<GmailAccountWithToken[]> => {
+  const { data, error } = await supabase
+    .from("gmail_accounts")
+    .select("id, gmail_address, refresh_token_encrypted") // Only fetch what's needed for revocation
+    .eq("app_user_id", appUserId);
+
+  if (error) {
+    throw new InternalServerError(
+      "Failed to fetch Gmail accounts for token revocation."
+    );
+  }
+
+  return data || [];
 };

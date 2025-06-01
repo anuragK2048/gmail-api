@@ -4,8 +4,10 @@ import { UnauthorizedError } from "../errors/specificErrors";
 
 export const isAuthenticated = asyncWrapper(
   async (req: Request, res: Response, next: NextFunction) => {
-    if (req.session && req.session.userId && req.session.isLoggedIn)
+    console.log(req.session.userId);
+    if (req.session && req.session.userId && req.session.isLoggedIn) {
+      console.log("DONE");
       return next();
-    else throw new UnauthorizedError("User not authorized", "AUTH_ERROR");
+    } else throw new UnauthorizedError("User not authorized", "AUTH_ERROR");
   }
 );

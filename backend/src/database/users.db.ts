@@ -1,4 +1,5 @@
-import { BadRequestError } from "../errors/specificErrors";
+import { UUID } from "crypto";
+import { BadRequestError, InternalServerError } from "../errors/specificErrors";
 import { NewUserAccountPayload, User } from "../types/user.types";
 
 import supabase from "./supabase";
@@ -33,4 +34,15 @@ export const findGmailAccountByGoogleId = async (google_id: string) => {
   //   );
   // }
   return data ? true : false;
+};
+
+export const deleteAppUser = async (userAppId: UUID) => {
+  const { data, error } = await supabase
+    .from("users")
+    .delete()
+    .eq("id", userAppId);
+
+  if (error) {
+    throw new InternalServerError("Unable to delete account from DB");
+  }
 };

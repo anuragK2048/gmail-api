@@ -102,6 +102,7 @@ export const handleGoogleCallback = asyncWrapper(
           google_user_id_for_account: userData.google_id,
           gmail_address: userData.primary_email,
           refresh_token_encrypted,
+          type: "primary",
         };
         const gmailAccountData: GmailAccount = await createEmailAccount(
           newGmailDetails
@@ -127,6 +128,7 @@ export const handleGoogleCallback = asyncWrapper(
         google_user_id_for_account: google_id,
         gmail_address: new_email,
         refresh_token_encrypted,
+        type: "secondary",
       };
       // if (await duplicateAccountCheck(google_id)) {
       //      console.error(`${new_email} already exist with this user`);

@@ -25,14 +25,14 @@ export const revokeGoogleToken = (tokenToRevoke: string): string | void => {
     res.on("end", () => {
       if (res.statusCode === 200) {
         console.log(
-          `Successfully revoked Google token (ending with ...${tokenToRevoke.slice(
+          `Successfully revoked Google token (ending with ...${tokenToRevoke?.slice(
             -6
           )}). Response: ${responseBody}`
         );
         return "success";
       } else {
         console.error(
-          `Failed to revoke Google token (ending with ...${tokenToRevoke.slice(
+          `Failed to revoke Google token (ending with ...${tokenToRevoke?.slice(
             -6
           )}). Status: ${res.statusCode}`,
           {
@@ -45,7 +45,7 @@ export const revokeGoogleToken = (tokenToRevoke: string): string | void => {
             const errorJson = JSON.parse(responseBody);
             if (errorJson.error === "invalid_token") {
               console.error(
-                `Token (ending with ...${tokenToRevoke.slice(
+                `Token (ending with ...${tokenToRevoke?.slice(
                   -6
                 )}) was already invalid or malformed.`
               );

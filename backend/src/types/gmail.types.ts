@@ -8,6 +8,7 @@ export interface NewGmailAccountPayload {
   gmail_name: string;
   refresh_token_encrypted: string;
   scopes_granted?: string[];
+  type: string;
 }
 
 export interface GmailAccount extends NewGmailAccountPayload {

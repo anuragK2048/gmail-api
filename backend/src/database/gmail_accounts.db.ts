@@ -57,3 +57,31 @@ export const getAllConnectedAccountTokenDetails = async (
 
   return data || [];
 };
+
+export const getUserIdByGmailAccountId = async (gmailAccountId: UUID) => {
+  console.log(gmailAccountId);
+  const { data, error } = await supabase
+    .from("gmail_accounts")
+    .select("app_user_id, refresh_token_encrypted, type")
+    .eq("id", gmailAccountId)
+    .single();
+
+  if (error) {
+    console.error(error);
+    throw new InternalServerError(
+      "Failed to get user id of this gmail account from DB"
+    );
+  }
+  return data;
+};
+
+export const deleteGmailAccount = async (gmailAccountId: UUID) => {
+  const { data, error } = await supabase
+    .from("gmail_accounts")
+    .delete()
+    .eq("id", gmailAccountId);
+
+  if (error) {
+    throw new InternalServerError("Unable to delete gmail account from DB");
+  }
+};

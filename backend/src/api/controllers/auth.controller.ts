@@ -82,10 +82,7 @@ export const handleGoogleCallback = asyncWrapper(
         // Login
         req.session.userId = existingGmailLink.app_user_id;
         req.session.isLoggedIn = true;
-        res.redirect(
-          FRONTEND_URL +
-            `/inbox?selectedAccountId=${existingGmailLink.google_user_id_for_account}`
-        );
+        res.redirect(FRONTEND_URL + `/${existingGmailLink.id}`);
       } else {
         // Register new user
         console.log("REGISTERING NEW USER");
@@ -114,9 +111,7 @@ export const handleGoogleCallback = asyncWrapper(
           if (err) console.error("🔴 Error in saving session");
         });
         delete req.session.oauthFlowContent;
-        res.redirect(
-          FRONTEND_URL + `/inbox?selectedAccountId=${gmailAccountData.id}`
-        );
+        res.redirect(FRONTEND_URL + `/${gmailAccountData.id}`);
       }
     } else if (
       req.session.userId &&
@@ -139,9 +134,7 @@ export const handleGoogleCallback = asyncWrapper(
         newGmailDetails
       );
       delete req.session.oauthFlowContent;
-      res.redirect(
-        FRONTEND_URL + `/inbox?selectedAccountId=${gmailAccountData.id}`
-      );
+      res.redirect(FRONTEND_URL + `/${gmailAccountData.id}`);
     }
     // res.redirect(FRONTEND_URL + "-error");
   }

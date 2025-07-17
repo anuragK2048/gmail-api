@@ -14,6 +14,12 @@ router.get("/", gmailAccountController.listLinkedAccounts);
 // DELETE /api/v1/gmail-accounts/:accountId (Unlink a specific Gmail account)
 router.delete("/:accountId", gmailAccountController.unlinkGmailAccount);
 
+// GET /api/v1/gmail-accounts/:accountId/profile
+router.get(
+  "/:accountId/profile",
+  gmailAccountController.getUserProfileForAccount
+);
+
 // POST /api/v1/gmail-accounts/:accountId/sync/start (Manually trigger a sync for a specific account)
 router.post(
   "/:accountId/sync/start",

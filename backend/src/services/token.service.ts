@@ -1,5 +1,7 @@
 import https from "https";
 import querystring from "querystring";
+import { getEncryptedRefreshToken } from "../database/gmail_accounts.db";
+import { string } from "zod/v4";
 
 export const revokeGoogleToken = (tokenToRevoke: string): string | void => {
   const postData = querystring.stringify({ token: tokenToRevoke });
@@ -76,4 +78,15 @@ export const revokeGoogleToken = (tokenToRevoke: string): string | void => {
   // Post the request with data
   postReq.write(postData);
   postReq.end();
+};
+
+export const getDecryptedUserRefreshToken = async (
+  appUserId: string,
+  gmailAccountId: string
+) => {
+  const { refresh_token_encrypted } = await getEncryptedRefreshToken(
+    appUserId,
+    gmailAccountId
+  );
+  return refresh_token_encrypted;
 };

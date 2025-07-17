@@ -3,7 +3,7 @@ import {
   GOOGLE_CLIENT_SECRET,
   GOOGLE_CALLBACK_URI,
 } from "./environment";
-// import { google } from "googleapis";
+// import { google } from "googleapis"; #TODO always gives error
 const google = require("googleapis").google; // Use require and type as any
 
 export const baseOauth2Client = new google.auth.OAuth2(

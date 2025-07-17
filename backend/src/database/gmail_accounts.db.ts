@@ -85,3 +85,23 @@ export const deleteGmailAccount = async (gmailAccountId: UUID) => {
     throw new InternalServerError("Unable to delete gmail account from DB");
   }
 };
+
+export const getEncryptedRefreshToken = async (
+  appUserId: string,
+  gmailAccountId: string
+) => {
+  const { data, error } = await supabase
+    .from("gmail_accounts")
+    .select("refresh_token_encrypted")
+    .eq("id", gmailAccountId)
+    .eq("app_user_id", appUserId)
+    .single();
+
+  if (error) {
+    throw new InternalServerError(
+      "Unable get encrypted refresh token for this email from DB"
+    );
+  }
+
+  return data;
+};

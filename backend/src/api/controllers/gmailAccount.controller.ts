@@ -7,10 +7,7 @@ import {
   getUserIdByGmailAccountId,
 } from "../../database/gmail_accounts.db";
 import { revokeGoogleToken } from "../../services/token.service";
-
-export const getEmails = async (req: Request, res: Response) => {
-  res.json({});
-};
+import { fetchGoogleProfile } from "../../services/gmailAccount.service";
 
 export const listLinkedAccounts = async (req: Request, res: Response) => {
   res.json({});
@@ -26,6 +23,7 @@ export const unlinkGmailAccount = asyncWrapper(
     }
     const { accountId } = req.params as { accountId: UUID };
     const appUserId: UUID = req.session.userId!;
+    console.log(accountId);
     const {
       app_user_id: gmailOwnerId,
       refresh_token_encrypted,
@@ -50,6 +48,44 @@ export const unlinkGmailAccount = asyncWrapper(
     res
       .status(200)
       .json({ message: "Gmail Account Disconnected Successfully" });
+  }
+);
+
+export const getUserProfileForAccount = asyncWrapper(
+  async (req: Request, res: Response) => {
+    try {
+      const appUserId = req.session.userId;
+      // Get account ID from route parameter, e.g., /api/v1/gmail-accounts/:accountId/profile
+      const { accountId } = req.params;
+
+      if (!appUserId) {
+        // This should ideally be caught by an isAuthenticated middleware first
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      if (!accountId) {
+        return res.status(400).json({ message: "Account ID is required" });
+      }
+
+      // Call the service to perform the business logic
+      const userProfile = await fetchGoogleProfile(appUserId, accountId);
+
+      // Send the successful response
+      res.status(200).json(userProfile);
+    } catch (error: any) {
+      // Check for specific errors returned from the service layer
+      if (
+        error.message.includes("Re-authentication required") ||
+        error.response?.data?.error === "invalid_grant"
+      ) {
+        // If the refresh token was invalid, tell the frontend it needs to re-auth
+        return res.status(401).json({
+          message:
+            "Google authentication has expired or been revoked. Please re-link the account.",
+          reauthRequired: true,
+        });
+      }
+    }
   }
 );
 

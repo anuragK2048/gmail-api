@@ -79,7 +79,7 @@ function App() {
               <>
                 <Login setEmails={setEmails} />
                 <h2 className="text-center m-6 text-3xl">Email Inbox</h2>
-                <div className="flex gap-3 justify-center">
+                <div className="flex gap-15 justify-center ">
                   <div className="flex flex-col gap-5 w-80 h-full m-3 mr-0 p-5">
                     <select
                       className="w-8 ml-auto"

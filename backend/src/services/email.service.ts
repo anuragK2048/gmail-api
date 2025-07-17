@@ -1,8 +1,5 @@
-// src/services/email.service.ts
 import { EMAILS_PER_PAGE } from "../constants"; // Default emails per page
 import supabase from "../database/supabase";
-
-// src/services/email.service.ts
 import { getAuthenticatedGmailClients } from "./gmailApiService.provider";
 
 // We are not importing googleapis types due to heap memory issues.
@@ -62,89 +59,158 @@ interface ParsedEmailData {
   label_ids?: (string | null)[];
 }
 
+// Assuming gmail_v1.Gmail type is not available due to heap issues, we use 'any'
+type GmailClient = any; // Replace with gmail_v1.Gmail if you can import the type
+type MessageHeader = { id?: string | null; threadId?: string | null };
+
+/**
+ * Fetches a list of message IDs from Gmail, automatically handling pagination.
+ * @param gmail - The authenticated Gmail API client.
+ * @param maxEmails - The total maximum number of message IDs to fetch.
+ * @param query - An optional Gmail search query string (e.g., 'in:inbox').
+ * @returns A promise that resolves to an array of message header objects.
+ */
+export async function fetchAllMessageIds(
+  gmail: GmailClient,
+  maxEmails: number,
+  query: string = ""
+): Promise<MessageHeader[]> {
+  let nextPageToken: string | undefined | null = undefined;
+  const allMessageHeaders: MessageHeader[] = [];
+
+  console.log(`Fetching up to ${maxEmails} message IDs...`);
+
+  try {
+    do {
+      // Determine how many results to fetch in this specific API call
+      const remaining = maxEmails - allMessageHeaders.length;
+      const limit = Math.min(remaining, 500); // Gmail API maxResults is 500
+
+      const response: any = await gmail.users.messages.list({
+        userId: "me",
+        maxResults: limit,
+        pageToken: nextPageToken,
+        q: query,
+        // You can also add fields for efficiency if needed, though list is lightweight
+        // fields: 'messages(id,threadId),nextPageToken',
+      });
+
+      const messages = response.data.messages;
+      if (messages && messages.length > 0) {
+        allMessageHeaders.push(...messages);
+        console.log(
+          `Fetched ${allMessageHeaders.length} / ${maxEmails} message IDs so far...`
+        );
+      }
+
+      nextPageToken = response.data.nextPageToken;
+
+      // Stop if we have enough emails or if there are no more pages
+    } while (nextPageToken && allMessageHeaders.length < maxEmails);
+
+    console.log(
+      `Finished fetching. Total message IDs found: ${allMessageHeaders.length}`
+    );
+    return allMessageHeaders;
+  } catch (error) {
+    console.error("Error fetching message IDs from Gmail:", error);
+    // Depending on your error handling strategy, you might want to re-throw
+    // or return the headers fetched so far.
+    throw new Error("Failed to fetch message ID list from Gmail.");
+  }
+}
+
+// A generic helper function for running promises with limited concurrency
+async function processInLimitedBatches<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = [];
+  const executing = new Set<Promise<void>>();
+  for (const item of items) {
+    const promise = fn(item).then((result) => {
+      results.push(result);
+      executing.delete(promise);
+    });
+    executing.add(promise);
+    if (executing.size >= limit) {
+      await Promise.race(executing); // Wait for the fastest promise in the pool to finish
+    }
+  }
+  await Promise.all(executing); // Wait for all remaining promises to finish
+  return results;
+}
+
 // ... syncEmailsForAccount function ...
 export async function syncEmailsForAccount(
   appUserId: string,
   gmailAccountId: string,
-  maxEmails: number = 10
+  maxEmails: number = 100
 ) {
   console.log(
     `Starting sync for user ${appUserId}, account ${gmailAccountId}...`
   );
-  // 'gmail' will be of type 'any' because of your workaround
-  const { gmail }: { gmail: any } = await getAuthenticatedGmailClients(
+  // ... (get gmail client and messageHeaders as before) ...
+  const { gmail } = await getAuthenticatedGmailClients(
     appUserId,
     gmailAccountId
   );
 
-  // 1. Get a list of message IDs
-  const listResponse = await gmail.users.messages.list({
-    userId: "me",
-    maxResults: maxEmails,
-  });
+  // 1. Get list of message IDs (e.g., 1000 of them)
+  const messageHeaders = await fetchAllMessageIds(gmail, maxEmails); // A helper to get all IDs
 
-  // Type the message headers array
-  const messageHeaders: { id?: string | null; threadId?: string | null }[] =
-    listResponse.data.messages;
-  if (!messageHeaders || messageHeaders.length === 0) {
-    console.log("No new messages found to sync.");
-    return;
-  }
+  // 2. Process them with a concurrency limit
+  const CONCURRENCY_LIMIT = 15; // A safe number, well below Google's limit of ~25-30
+  console.log(
+    `Fetching details for ${messageHeaders.length} emails with a concurrency of ${CONCURRENCY_LIMIT}...`
+  );
 
-  // 2. Prepare to fetch full details for each message
-  // --- FIX for TS7006 ---
-  const emailPromises = messageHeaders.map(
-    async (message: { id?: string | null }) => {
-      if (!message.id) return null;
-
+  const parsedEmails = await processInLimitedBatches(
+    messageHeaders,
+    CONCURRENCY_LIMIT,
+    async (header) => {
+      if (!header.id) return null;
       try {
         const detailResponse = await gmail.users.messages.get({
           userId: "me",
-          id: message.id,
+          id: header.id,
           format: "full",
         });
-        // Cast the response data to your defined minimal interface
-        const gmailMessage = detailResponse.data as GmailMessage;
-        return parseGmailMessage(gmailMessage, appUserId, gmailAccountId);
-      } catch (error) {
-        console.error(
-          `Failed to fetch or parse message ID ${message.id}:`,
-          error
+        return parseGmailMessage(
+          detailResponse.data as any,
+          appUserId,
+          gmailAccountId
         );
+      } catch (error) {
+        console.error(`Failed to fetch message ID ${header.id}:`, error);
         return null;
       }
     }
   );
 
-  // 3. Fetch and parse all emails in parallel
-  const parsedEmails = (await Promise.all(emailPromises)).filter(
-    (email): email is ParsedEmailData => email !== null
-  );
+  const validEmails = parsedEmails.filter((e) => e !== null);
+  console.log(`Successfully parsed ${validEmails.length} emails.`);
 
-  if (parsedEmails.length === 0) {
-    console.log("No emails were successfully parsed.");
-    return;
+  // 3. Upsert the results into Supabase in batches
+  // Supabase (and most DBs) have a limit on how many rows you can upsert at once.
+  // A batch size of 100-500 is usually safe.
+  const BATCH_SIZE_DB = 250;
+  for (let i = 0; i < validEmails.length; i += BATCH_SIZE_DB) {
+    const batch = validEmails.slice(i, i + BATCH_SIZE_DB);
+    // const emailsForDb = batch.map(({ labelIds, ...rest }) => rest); // Remove temporary fields
+
+    const { error } = await supabase.from("emails").upsert(batch, {
+      onConflict: "gmail_account_id, gmail_message_id",
+      ignoreDuplicates: false,
+    });
+    if (error) {
+      console.error("Supabase batch upsert error:", error);
+      // Decide how to handle partial failure
+    } else {
+      console.log(`Upserted batch of ${batch.length} emails to DB.`);
+    }
   }
-
-  // 4. Insert/update the data into Supabase
-  // `upsert` is perfect here: it inserts a new record, or updates an existing one
-  // if a record with the same unique constraint (gmail_account_id, gmail_message_id) already exists.
-  const { data, error } = await supabase
-    .from("emails")
-    .upsert(parsedEmails, {
-      onConflict: "gmail_account_id, gmail_message_id", // Your unique constraint
-      ignoreDuplicates: false, // Set to false to ensure updates happen
-    })
-    .select("id"); // Optionally select some data back
-
-  if (error) {
-    console.error("Supabase upsert error:", error);
-    throw new Error("Failed to save emails to the database.");
-  }
-
-  console.log(
-    `Sync complete. Successfully upserted ${data?.length || 0} emails.`
-  );
 }
 
 /**

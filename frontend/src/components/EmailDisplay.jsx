@@ -10,22 +10,13 @@ import {
   Trash,
   Archive,
 } from "lucide-react";
+import DOMPurify from "dompurify"; // Import for security
 
-// Function to decode base64 data
-const decodeBase64 = (data) => {
-  try {
-    return atob(data.replace(/-/g, "+").replace(/_/g, "/"));
-  } catch (error) {
-    console.error("Error decoding base64:", error);
-    return "";
-  }
-};
-
-// Helper function to parse Gmail date format
+// Helper to format dates, kept from your original code
 const formatDate = (dateString) => {
+  if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleString("en-US", {
-    weekday: "short",
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -35,140 +26,141 @@ const formatDate = (dateString) => {
   });
 };
 
-// Get sender name from formatted "Name <email>" string
-const getSenderName = (from) => {
-  const match = from.match(/(.*?)\s*<.*>/);
-  return match ? match[1].trim() : from;
-};
-
-// Get email address from formatted "Name <email>" string
-const getEmailAddress = (from) => {
-  const match = from.match(/<(.+?)>/);
-  return match ? match[1] : from;
-};
-
-function EmailDisplay({ emailDetails }) {
+// The component now receives the full email object from your DB
+function EmailDisplay({ emailDetails, onStar, onArchive, onTrash }) {
   const [expanded, setExpanded] = useState(true);
 
-  // Extract header information
-  const getHeaderValue = (name) => {
-    const header = emailDetails.payload.headers.find(
-      (h) => h.name.toLowerCase() === name.toLowerCase()
-    );
-    return header ? header.value : "";
-  };
-
-  const subject = getHeaderValue("Subject");
-  const from = getHeaderValue("From");
-  const to = getHeaderValue("To");
-  const date = getHeaderValue("Date");
-
-  // Extract email content (preferring HTML over plain text)
-  const htmlContent = emailDetails.payload.parts?.find(
-    (part) => part.mimeType === "text/html"
-  )?.body?.data;
-  const textContent = emailDetails.payload.parts?.find(
-    (part) => part.mimeType === "text/plain"
-  )?.body?.data;
-  const reactionData = emailDetails.payload.parts?.find(
-    (part) => part.mimeType === "text/vnd.google.email-reaction+json"
-  )?.body?.data;
-
-  // Decode reaction JSON
-  let reaction = null;
-  if (reactionData) {
-    try {
-      const decodedReaction = JSON.parse(decodeBase64(reactionData));
-      reaction = decodedReaction.emoji;
-    } catch (error) {
-      console.error("Error parsing reaction:", error);
-    }
+  if (!emailDetails) {
+    // Can show a placeholder or skeleton loader here
+    return <div>Select an email to view its details.</div>;
   }
 
-  // Create markup from HTML content
-  const createMarkupFromHtml = () => {
-    if (!htmlContent) return { __html: "" };
-    const decodedHtml = decodeBase64(htmlContent);
-    return { __html: decodedHtml };
+  // --- Data from your database schema ---
+  const {
+    id,
+    subject,
+    from_name,
+    from_address,
+    to_addresses,
+    sent_date,
+    body_html,
+    is_starred,
+  } = emailDetails;
+
+  // Create sanitized markup from the HTML content stored in your DB
+  const createSanitizedMarkup = () => {
+    // **SECURITY**: Sanitize HTML from email to prevent XSS attacks
+    const sanitizedHtml = DOMPurify.sanitize(body_html || "");
+    return { __html: sanitizedHtml };
   };
 
-  const toggleExpand = () => {
-    setExpanded(!expanded);
-  };
+  const toggleExpand = () => setExpanded(!expanded);
 
   return (
-    <div className="min-w-[50rem] mx-2 bg-white rounded-lg shadow max-w-[50rem] max-h-[80svh] overflow-scroll">
-      {/* Email header */}
+    <div className="flex-grow bg-white rounded-lg shadow-md max-h-[85vh] flex flex-col">
+      {/* Email Header */}
       <div className="p-4 border-b border-gray-200">
-        <div className="flex justify-between items-center mb-1">
-          <h2 className="text-xl font-medium text-gray-800">{subject}</h2>
-          <div className="flex space-x-2">
-            <button className="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
-              <Archive size={20} />
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-2xl font-normal text-gray-800 truncate pr-4">
+            {subject}
+          </h2>
+          <div className="flex items-center space-x-1 text-gray-500">
+            {/* These buttons would call functions passed as props */}
+            <button
+              onClick={() => onArchive(id)}
+              className="hover:bg-gray-100 p-2 rounded-full"
+              title="Archive"
+            >
+              <Archive size={18} />
             </button>
-            <button className="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
-              <Trash size={20} />
+            <button
+              onClick={() => onTrash(id)}
+              className="hover:bg-gray-100 p-2 rounded-full"
+              title="Delete"
+            >
+              <Trash size={18} />
             </button>
-            <button className="text-gray-500 hover:bg-gray-100 p-2 rounded-full">
-              <MoreHorizontal size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3">
-              {getSenderName(from).charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div className="flex items-center">
-                <span className="font-medium">{getSenderName(from)}</span>
-                <span className="text-gray-500 text-sm ml-2">
-                  &lt;{getEmailAddress(from)}&gt;
-                </span>
-                <button className="ml-2 text-gray-400">
-                  <Star size={16} />
-                </button>
-              </div>
-              <div className="text-sm text-gray-500">
-                to {getEmailAddress(to)}
-              </div>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500 flex items-center">
-            {formatDate(date)}
-            <button onClick={toggleExpand} className="ml-2 text-gray-500">
-              {expanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            <button className="hover:bg-gray-100 p-2 rounded-full" title="More">
+              <MoreHorizontal size={18} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Email body */}
-      {expanded && (
-        <div className="p-4">
-          {/* Email content */}
-          <div className="mb-4">
-            <div dangerouslySetInnerHTML={createMarkupFromHtml()} />
+      {/* Email Body & Details */}
+      <div className="flex-grow p-4 overflow-y-auto">
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center">
+            {/* Avatar */}
+            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold mr-3 text-lg">
+              {from_name ? from_name.charAt(0).toUpperCase() : "?"}
+            </div>
+            {/* Sender/Recipient Info */}
+            <div className="flex flex-col">
+              <div className="flex items-center">
+                <span className="font-semibold text-gray-800">
+                  {from_name || "Unknown Sender"}
+                </span>
+                <span className="text-gray-500 text-sm ml-2">
+                  {from_address}
+                </span>
+              </div>
+              <div className="text-sm text-gray-500">
+                to {to_addresses?.join(", ") || "undisclosed-recipients"}
+                <button
+                  onClick={toggleExpand}
+                  className="ml-2 text-gray-500 inline-block align-middle"
+                >
+                  {expanded ? (
+                    <ChevronUp size={16} />
+                  ) : (
+                    <ChevronDown size={16} />
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-
-          {/* Email actions */}
-          <div className="pt-3 border-t border-gray-200 flex space-x-4">
-            <button className="flex items-center px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">
-              <Reply size={18} className="mr-2" />
-              Reply
-            </button>
-            <button className="flex items-center px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">
-              <ReplyAll size={18} className="mr-2" />
-              Reply all
-            </button>
-            <button className="flex items-center px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200">
-              <Forward size={18} className="mr-2" />
-              Forward
+          <div className="text-xs text-gray-600 flex items-center whitespace-nowrap pl-2">
+            {formatDate(sent_date)}
+            <button
+              onClick={() => onStar(id, !is_starred)}
+              className="ml-3 text-gray-400 hover:text-yellow-500"
+              title={is_starred ? "Unstar" : "Star"}
+            >
+              <Star
+                size={16}
+                className={is_starred ? "fill-current text-yellow-400" : ""}
+              />
             </button>
           </div>
         </div>
-      )}
+
+        {/* Collapsible Email Content */}
+        {expanded && (
+          <div className="prose prose-sm max-w-none text-gray-800">
+            {/* This renders the actual email HTML content safely */}
+            <div dangerouslySetInnerHTML={createSanitizedMarkup()} />
+          </div>
+        )}
+      </div>
+
+      {/* Action Buttons Footer */}
+      <div className="p-4 border-t border-gray-200 mt-auto">
+        <div className="flex space-x-2">
+          <button className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium text-sm rounded-full hover:bg-gray-100 hover:shadow-sm">
+            <Reply size={16} className="mr-2" />
+            Reply
+          </button>
+          <button className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium text-sm rounded-full hover:bg-gray-100 hover:shadow-sm">
+            <ReplyAll size={16} className="mr-2" />
+            Reply all
+          </button>
+          <button className="flex items-center px-4 py-2 border border-gray-300 text-gray-700 font-medium text-sm rounded-full hover:bg-gray-100 hover:shadow-sm">
+            <Forward size={16} className="mr-2" />
+            Forward
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

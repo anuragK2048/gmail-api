@@ -9,7 +9,7 @@ import OAuthCallback from "./components/OAuthCallback";
 
 function App() {
   const [emails, setEmails] = useState([]);
-  const [selectedEmail, setSelectedEmail] = useState({});
+  const [selectedEmail, setSelectedEmail] = useState(null);
   const [selectedOption, setSelectedOption] = useState(undefined);
   const [emailQuantity, setEmailQuantity] = useState(20);
   useEffect(() => {
@@ -30,10 +30,44 @@ function App() {
     // getEmails(emailQuantity);
   }, [emailQuantity]);
 
-  function changeSelectedEmail(emailDetails) {
-    setSelectedEmail(emailDetails);
+  function changeSelectedEmail(emailId) {
+    async function getSingleEmail(emailId) {
+      try {
+        // Construct the full URL for the API endpoint
+        const API_URL = `http://localhost:3000/api/v1/emails/${emailId}`;
+
+        // Make the fetch request. The browser automatically sends the session cookie.
+        const response = await fetch(API_URL, {
+          credentials: "include",
+          method: "GET",
+        });
+
+        if (!response.ok) {
+          // Handle errors, e.g., 401 Unauthorized, 404 Not Found
+          const errorData = await response.json();
+          console.error(`Error fetching profile: ${errorData.message}`);
+          return;
+        }
+        const email = await response.json();
+        console.log("Email Details", ":", email);
+        setSelectedEmail(email);
+      } catch (error) {
+        console.error("Network error or other issue:", error);
+      }
+    }
+    getSingleEmail(emailId);
     setSelectedOption(undefined);
   }
+
+  // const handleStarEmail = async (emailId, newStarredState) => {
+  //   // API call to your backend to star/unstar
+  //   const method = newStarredState ? 'POST' : 'DELETE';
+  //   await fetch(`http://localhost:5000/api/v1/emails/${emailId}/star`, { method: method, credentials: 'include' });
+
+  //   // Update the local state to reflect the change immediately
+  //   setSelectedEmail(prev => ({ ...prev, is_starred: newStarredState }));
+  //   // You'd also want to update this email in your main list's state
+  // };
 
   return (
     <>
@@ -43,7 +77,7 @@ function App() {
             path="/*"
             element={
               <>
-                <Login />
+                <Login setEmails={setEmails} />
                 <h2 className="text-center m-6 text-3xl">Email Inbox</h2>
                 <div className="flex gap-3 justify-center">
                   <div className="flex flex-col gap-5 w-80 h-full m-3 mr-0 p-5">
@@ -65,7 +99,7 @@ function App() {
                       changeSelectedEmail={changeSelectedEmail}
                     />
                   </div>
-                  {Object.keys(selectedEmail).length !== 0 && (
+                  {selectedEmail && (
                     <EmailDisplay emailDetails={selectedEmail} />
                   )}
                   <EmailOptions setSelectedOption={setSelectedOption} />

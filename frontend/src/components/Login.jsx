@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 
-function Login() {
+function Login({ setEmails }) {
   const params = useParams();
   const id = params["*"];
   console.log(id);
@@ -147,6 +147,7 @@ function Login() {
       }
       const emails = await response.json();
       console.log("Emails", accountId, ":", emails);
+      setEmails(emails);
     } catch (error) {
       console.error("Network error or other issue:", error);
     }

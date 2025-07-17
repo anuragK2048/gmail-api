@@ -85,6 +85,101 @@ function Login() {
       console.error("Network error or other issue:", error);
     }
   }
+  async function syncEmailToDB(accountId) {
+    // You must have the accountId to build the URL
+    if (!accountId) {
+      console.error("Account ID is missing!");
+      return;
+    }
+
+    try {
+      // Construct the full URL for the API endpoint
+      const API_URL = `http://localhost:3000/api/v1/emails/${accountId}/sync`;
+
+      // Make the fetch request. The browser automatically sends the session cookie.
+      const response = await fetch(API_URL, {
+        credentials: "include",
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // No need to manually add Authorization header if using session cookies
+        },
+      });
+
+      if (!response.ok) {
+        // Handle errors, e.g., 401 Unauthorized, 404 Not Found
+        const errorData = await response.json();
+        console.error(`Error fetching profile: ${errorData.message}`);
+        if (errorData.reauthRequired) {
+          alert("Authentication expired for this account. Please re-link it.");
+          // Trigger re-auth flow
+        }
+        return;
+      }
+      const res = await response.json();
+      console.log("Sync req successfull", res);
+    } catch (error) {
+      console.error("Network error or other issue:", error);
+    }
+  }
+  async function getEmails(accountId) {
+    // You must have the accountId to build the URL
+    if (!accountId) {
+      console.error("Account ID is missing!");
+      return;
+    }
+
+    try {
+      // Construct the full URL for the API endpoint
+      const API_URL = `http://localhost:3000/api/v1/emails/emailList/${accountId}`;
+
+      // Make the fetch request. The browser automatically sends the session cookie.
+      const response = await fetch(API_URL, {
+        credentials: "include",
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        // Handle errors, e.g., 401 Unauthorized, 404 Not Found
+        const errorData = await response.json();
+        console.error(`Error fetching profile: ${errorData.message}`);
+        return;
+      }
+      const emails = await response.json();
+      console.log("Emails", accountId, ":", emails);
+    } catch (error) {
+      console.error("Network error or other issue:", error);
+    }
+  }
+  async function getSingleEmail(emailId) {
+    // You must have the accountId to build the URL
+    if (!accountId) {
+      console.error("Account ID is missing!");
+      return;
+    }
+
+    try {
+      // Construct the full URL for the API endpoint
+      const API_URL = `http://localhost:3000/api/v1/emails/${emailId}`;
+
+      // Make the fetch request. The browser automatically sends the session cookie.
+      const response = await fetch(API_URL, {
+        credentials: "include",
+        method: "GET",
+      });
+
+      if (!response.ok) {
+        // Handle errors, e.g., 401 Unauthorized, 404 Not Found
+        const errorData = await response.json();
+        console.error(`Error fetching profile: ${errorData.message}`);
+        return;
+      }
+      const emails = await response.json();
+      console.log("Email Details", accountId, ":", emails);
+    } catch (error) {
+      console.error("Network error or other issue:", error);
+    }
+  }
   return (
     <div className="">
       <button
@@ -122,6 +217,24 @@ function Login() {
         onClick={() => fetchProfileForAccount(id)}
       >
         Fetch Profile
+      </button>
+      <button
+        className="m-1 p-2 rounded-2xl bg-amber-200 text-lg"
+        onClick={() => syncEmailToDB(id)}
+      >
+        Sync emails to DB
+      </button>
+      <button
+        className="m-1 p-2 rounded-2xl bg-amber-200 text-lg"
+        onClick={() => getEmails(id)}
+      >
+        Get Emails
+      </button>
+      <button
+        className="m-1 p-2 rounded-2xl bg-amber-200 text-lg"
+        onClick={() => getSingleEmail("19801be4-8e7d-4c14-bb20-7eaf745357eb")}
+      >
+        Get Single Email
       </button>
     </div>
   );

@@ -10,14 +10,19 @@ const router: Router = express.Router();
 router.use(isAuthenticated);
 
 // --- Email Listing & Viewing ---
+
+// IMPLEMENTED
 // GET /api/v1/emails?category=inbox&limit=20&page=1&accountId=xyz&starred=true&unread=true
 router.get(
-  "/",
+  "/emailList/:accountId",
   /* validateRequest(emailFetchSchema), */ emailController.getEmails
 );
-
 // GET /api/v1/emails/:emailId (Get a single email by your app's internal ID)
 router.get("/:emailId", emailController.getSingleEmailDetails);
+
+// IMPLEMENTED
+// POST /api/v1/gmail-accounts/:accountId/sync
+router.post("/:accountId/sync", emailController.startAccountSync);
 
 // GET /api/v1/emails/threads/:threadId (Get all emails in a specific thread)
 // router.get('/threads/:threadId', emailController.getThreadDetails);

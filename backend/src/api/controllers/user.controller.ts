@@ -2,15 +2,32 @@ import { Request, Response } from "express";
 import { asyncWrapper } from "../../middleware/asyncWrapper";
 import { getAllConnectedAccountTokenDetails } from "../../database/gmail_accounts.db";
 import { UUID } from "crypto";
-import { forEach } from "lodash";
 import { revokeGoogleToken } from "../../services/token.service";
-import { deleteAppUser } from "../../database/users.db";
+import {
+  deleteAppUser,
+  findUserWithLinkedAccounts,
+} from "../../database/users.db";
 import { NODE_ENV } from "../../config";
 import { InternalServerError } from "../../errors/specificErrors";
 
-export const getCurrentUserProfile = async (req: Request, res: Response) => {
-  res.json({});
-};
+// Handles GET /api/v1/users/me
+export const getCurrentUserProfile = asyncWrapper(
+  async (req: Request, res: Response) => {
+    const userId = req.session.userId; // Get user ID from the active session
+
+    // Fetch user details from your database using the ID
+    const userData = await findUserWithLinkedAccounts(userId!); // From your userService
+
+    if (!userData) {
+      req.session.destroy(() => {});
+      return res
+        .status(401)
+        .json({ message: "User not found, session terminated." });
+    }
+
+    res.status(200).json(userData);
+  }
+);
 
 export const deleteCurrentUserAccount = asyncWrapper(
   async (req: Request, res: Response) => {

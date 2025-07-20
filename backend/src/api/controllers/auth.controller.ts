@@ -4,10 +4,7 @@ import {
   generateGoogleOAuthURL,
   validateUser,
 } from "../../services/auth.service";
-import {
-  createUser,
-  findGmailAccountByGoogleId,
-} from "../../database/users.db";
+import { createUser } from "../../database/users.db";
 import { FRONTEND_URL, NODE_ENV } from "../../config";
 import { GmailAccount, NewGmailAccountPayload } from "../../types/gmail.types";
 import { NewUserAccountPayload, User } from "../../types/user.types";
@@ -82,7 +79,7 @@ export const handleGoogleCallback = asyncWrapper(
         // Login
         req.session.userId = existingGmailLink.app_user_id;
         req.session.isLoggedIn = true;
-        res.redirect(FRONTEND_URL + `/${existingGmailLink.id}`);
+        res.redirect(FRONTEND_URL + `/inbox`);
       } else {
         // Register new user
         console.log("REGISTERING NEW USER");
@@ -111,7 +108,7 @@ export const handleGoogleCallback = asyncWrapper(
           if (err) console.error("🔴 Error in saving session");
         });
         delete req.session.oauthFlowContent;
-        res.redirect(FRONTEND_URL + `/${gmailAccountData.id}`);
+        res.redirect(FRONTEND_URL + `/inbox`);
       }
     } else if (
       req.session.userId &&
@@ -134,7 +131,7 @@ export const handleGoogleCallback = asyncWrapper(
         newGmailDetails
       );
       delete req.session.oauthFlowContent;
-      res.redirect(FRONTEND_URL + `/${gmailAccountData.id}`);
+      res.redirect(FRONTEND_URL + `/inbox`);
     }
     // res.redirect(FRONTEND_URL + "-error");
   }

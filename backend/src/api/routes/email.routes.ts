@@ -11,6 +11,12 @@ router.use(isAuthenticated);
 
 // --- Email Listing & Viewing ---
 
+// GET /api/v1/emails/:emailId/labels
+router.get("/:emailId/labels", emailController.getEmailLabels);
+
+// GET /api/v1/emails/by-label/:labelId
+router.get("/by-label/:labelId", emailController.getEmailsByLabel);
+
 // IMPLEMENTED
 // GET /api/v1/emails?category=inbox&limit=20&page=1&accountId=xyz&starred=true&unread=true
 router.get(

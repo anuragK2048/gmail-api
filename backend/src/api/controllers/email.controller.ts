@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { asyncWrapper } from "../../middleware/asyncWrapper";
 import { z } from "zod";
 import {
@@ -6,6 +6,7 @@ import {
   fetchSingleEmailFromDb,
   syncEmailsForAccount,
 } from "../../services/email.service";
+import { getEmailsForLabel, getLabelsForEmail } from "../../database/emails.db";
 
 const getEmailsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -114,3 +115,40 @@ export const startAccountSync = asyncWrapper(
     });
   }
 );
+
+export const getEmailLabels = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const appUserId = req.session.userId!;
+    const { emailId } = req.params;
+    const labels = await getLabelsForEmail(appUserId, emailId);
+    res.status(200).json(labels);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Handles fetching all emails that have a specific user-defined label.
+ */
+export const getEmailsByLabel = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const appUserId = req.session.userId!;
+    const { labelId } = req.params;
+    // You could get pagination from query params, e.g., req.query.page
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 20;
+
+    const emails = await getEmailsForLabel(appUserId, labelId, limit, page);
+    res.status(200).json(emails);
+  } catch (error) {
+    next(error);
+  }
+};

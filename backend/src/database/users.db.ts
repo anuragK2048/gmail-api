@@ -20,21 +20,36 @@ export async function createUser(
   return dataObj;
 }
 
-export const findGmailAccountByGoogleId = async (google_id: string) => {
+/* Fetches the app user's profile AND a list of their linked Gmail accounts. */
+export async function findUserWithLinkedAccounts(appUserId: string) {
   const { data, error } = await supabase
     .from("users")
-    .select("*")
-    .eq("google_id", google_id)
-    .single(); // Optional: use .single() if you expect only 1 result
-  // if (error) {
-  //   console.error(error);
-  //   throw new BadRequestError(
-  //     "Unable to check duplicate accounts",
-  //     "DB_CHECK_ERROR"
-  //   );
-  // }
-  return data ? true : false;
-};
+    .select(
+      `
+      id,
+      full_name,
+      primary_email,
+      avatar_url,
+      gmail_accounts(
+        id,
+        gmail_address,
+        is_sync_active,
+        last_sync_time,
+        type
+      )
+    `
+    )
+    .eq("id", appUserId)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null; // Not found
+    console.error("Error finding user with linked accounts:", error);
+    throw new Error("Failed to retrieve user profile.");
+  }
+
+  return data;
+}
 
 export const deleteAppUser = async (userAppId: UUID) => {
   const { data, error } = await supabase

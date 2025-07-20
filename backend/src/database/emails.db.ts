@@ -87,6 +87,6 @@ export async function getEmailsForLabel(
     .range(offset, offset + limit - 1);
 
   if (error) throw new Error(error.message);
-
+  console.log(data);
   return data?.map((item: any) => item.emails) || [];
 }

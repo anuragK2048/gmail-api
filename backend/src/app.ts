@@ -66,7 +66,7 @@ async function initializeApp() {
       cookie: {
         secure: NODE_ENV === "production",
         httpOnly: true,
-        maxAge: 60 * 60 * 1000, // 1 hour
+        maxAge: 60 * 60 * 1000 * 3, // 1 hour
         sameSite: "lax", // Consider 'strict' if appropriate
       },
     })

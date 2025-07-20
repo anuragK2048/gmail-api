@@ -6,6 +6,7 @@ export const createLabelSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color")
     .optional(),
+  prompt: z.string().optional(),
 });
 
 export const updateLabelSchema = z.object({
@@ -14,6 +15,7 @@ export const updateLabelSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
+  prompt: z.string().optional(),
 });
 
 export const manageEmailLabelsSchema = z.object({

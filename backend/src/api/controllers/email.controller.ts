@@ -89,7 +89,7 @@ export const startAccountSync = asyncWrapper(
     const appUserId = req.session.userId!;
     // Get account ID from route parameter, e.g., /api/v1/gmail-accounts/:accountId/sync
     const { accountId } = req.params;
-    const maxEmailsToSync = parseInt(req.query.limit as string, 10) || 100;
+    const maxEmailsToSync = parseInt(req.query.limit as string, 10) || 50;
 
     if (!accountId) {
       return res.status(400).json({ message: "Account ID is required" });

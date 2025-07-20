@@ -1,5 +1,11 @@
 import { EMAILS_PER_PAGE } from "../constants"; // Default emails per page
+import {
+  addLabelsToEmailBatch,
+  bulkAddLabelsToEmails,
+  findLabelsByUserId,
+} from "../database/labels.db";
 import supabase from "../database/supabase";
+import { assignLabels_LLM } from "./ai.service";
 import { getAuthenticatedGmailClients } from "./gmailApiService.provider";
 
 // We are not importing googleapis types due to heap memory issues.
@@ -146,7 +152,7 @@ async function processInLimitedBatches<T, R>(
 export async function syncEmailsForAccount(
   appUserId: string,
   gmailAccountId: string,
-  maxEmails: number = 100
+  maxEmails: number = 20
 ) {
   console.log(
     `Starting sync for user ${appUserId}, account ${gmailAccountId}...`
@@ -192,24 +198,52 @@ export async function syncEmailsForAccount(
   const validEmails = parsedEmails.filter((e) => e !== null);
   console.log(`Successfully parsed ${validEmails.length} emails.`);
 
+  let emailsWithId = [];
+
   // 3. Upsert the results into Supabase in batches
   // Supabase (and most DBs) have a limit on how many rows you can upsert at once.
   // A batch size of 100-500 is usually safe.
+  // Inside your main sync function...
   const BATCH_SIZE_DB = 250;
+  const allUpsertedEmails = []; // Store all successfully parsed emails here
+
   for (let i = 0; i < validEmails.length; i += BATCH_SIZE_DB) {
     const batch = validEmails.slice(i, i + BATCH_SIZE_DB);
-    // const emailsForDb = batch.map(({ labelIds, ...rest }) => rest); // Remove temporary fields
 
-    const { error } = await supabase.from("emails").upsert(batch, {
-      onConflict: "gmail_account_id, gmail_message_id",
-      ignoreDuplicates: false,
-    });
+    const { error, data: upsertedData } = await supabase
+      .from("emails")
+      .upsert(batch, {
+        // Assuming 'batch' has the right keys for the DB
+        onConflict: "gmail_account_id, gmail_message_id",
+      })
+      .select("id, subject, from_name"); // Select back the data you need for the next step
+
     if (error) {
       console.error("Supabase batch upsert error:", error);
-      // Decide how to handle partial failure
+      // Continue to next batch, or break if it's a critical error
+      continue;
     } else {
+      // Merge the returned ID with the original batch data if needed,
+      // or just use the data returned from the SELECT.
+      allUpsertedEmails.push(...upsertedData);
       console.log(`Upserted batch of ${batch.length} emails to DB.`);
     }
+  }
+
+  // Now, process the successfully saved emails
+  try {
+    // get labels
+    const labels = await findLabelsByUserId(appUserId);
+    if (labels && labels.length > 0 && allUpsertedEmails.length > 0) {
+      console.log(
+        `Starting AI label assignment for ${allUpsertedEmails.length} emails.`
+      );
+      // Await the whole process to ensure it completes before the sync function exits
+      await assignLabelsToEmails(appUserId, labels, allUpsertedEmails);
+      console.log("AI label assignment finished.");
+    }
+  } catch (error) {
+    console.error("An error occurred during the AI labeling process:", error);
   }
 }
 
@@ -406,4 +440,70 @@ export async function fetchSingleEmailFromDb(
   // and then combine them before returning.
 
   return data;
+}
+
+export async function assignLabelsToEmails(
+  appUserId: string,
+  labels: any[], // Should have type { id: string; name: string; prompt: string }
+  emails: any[] // Should have type { id: string; subject: string; from_name: string }
+) {
+  if (!labels || labels.length === 0 || !emails || emails.length === 0) {
+    console.log("No labels or emails to process for AI assignment.");
+    return;
+  }
+
+  // Preprocess labels once
+  const processedLabels = labels.map((label) => ({
+    name: label.name,
+    criteria: label.prompt,
+  }));
+
+  // Create a map of all label associations to be inserted into the DB later
+  const emailLabelInserts: { email_id: string; label_id: string }[] = [];
+
+  // Use a for...of loop to correctly handle await
+  for (const email of emails) {
+    try {
+      const { id: emailId, subject, from_name: from } = email;
+      const importantInfo = { subject, from };
+
+      // Make the LLM call for the current email
+      const llmResponse: boolean[] = await assignLabels_LLM(
+        importantInfo,
+        processedLabels
+      );
+
+      // Collect the label IDs that should be applied to this email
+      const selectedLabelIds = labels
+        .filter((label, index) => llmResponse?.[index] === true)
+        .map((label) => label.id);
+
+      if (selectedLabelIds.length > 0) {
+        // Add the associations to our bulk insert array
+        for (const labelId of selectedLabelIds) {
+          emailLabelInserts.push({ email_id: emailId, label_id: labelId });
+        }
+      }
+    } catch (error) {
+      // Log error for the specific email but continue with the rest
+      console.error(`Failed to assign labels for email ID ${email.id}:`, error);
+    }
+  }
+
+  // After processing all emails, perform a SINGLE bulk insert
+  if (emailLabelInserts.length > 0) {
+    console.log(
+      `Applying ${emailLabelInserts.length} total label associations to the database...`
+    );
+    try {
+      // This function should be designed to take an array of { email_id, label_id }
+      const response = await bulkAddLabelsToEmails(
+        appUserId,
+        emailLabelInserts
+      );
+      console.log("Bulk label assignment response:", response);
+    } catch (error) {
+      console.error("Failed to bulk insert email-label associations:", error);
+    }
+  }
 }

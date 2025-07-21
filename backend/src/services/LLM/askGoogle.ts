@@ -8,5 +8,7 @@ export async function askGemini(prompt: string) {
     model: "gemini-2.5-flash",
     contents: prompt,
   });
-  return response.text;
+  const result = response.text;
+  console.log(result);
+  return result;
 }

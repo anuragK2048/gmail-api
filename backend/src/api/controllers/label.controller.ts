@@ -11,7 +11,17 @@ export const listUserLabels = async (
 ) => {
   try {
     const appUserId = req.session.userId!;
-    const labels = await labelDbOperations.findLabelsByUserId(appUserId);
+
+    // Read the optional accountId from the query string
+    // e.g., /api/v1/labels?accountId=some-uuid-123
+    const { accountId } = req.query;
+    console.log(accountId);
+
+    const labels = await labelDbOperations.findLabelsByUserId(
+      appUserId,
+      accountId as string | undefined
+    );
+
     res.status(200).json(labels);
   } catch (error) {
     next(error);

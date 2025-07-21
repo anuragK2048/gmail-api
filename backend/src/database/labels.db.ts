@@ -2,15 +2,33 @@
 
 import supabase from "./supabase";
 
-export async function findLabelsByUserId(appUserId: string) {
-  const { data, error } = await supabase
+export async function findLabelsByUserId(
+  appUserId: string,
+  gmailAccountId?: string
+) {
+  // Start building the query
+  let query = supabase
     .from("labels")
-    .select("id, name, color, prompt")
-    .eq("app_user_id", appUserId)
+    .select("id, name, color")
+    .eq("app_user_id", appUserId) // Always filter by the owner
     .order("name", { ascending: true });
 
-  if (error) throw new Error(error.message);
-  return data;
+  // If a specific account ID is provided, add it as a filter
+  if (gmailAccountId) {
+    // This assumes your 'labels' table has a 'gmail_account_id' foreign key.
+    // If you decided labels are global to the app_user, this filter would change.
+    // Based on a robust design, labels are per-account.
+    query = query.eq("gmail_account_id", gmailAccountId);
+  }
+
+  // Execute the query
+  const { data, error } = await query;
+
+  if (error) {
+    console.error("Error fetching labels:", error);
+    throw new Error(error.message);
+  }
+  return data || [];
 }
 
 export async function createNewLabel(
@@ -33,6 +51,35 @@ export async function createNewLabel(
     throw new Error(error.message);
   }
   return data;
+}
+
+interface NewLabelReq {
+  name: string;
+  color?: string;
+  prompt?: string;
+}
+
+export async function createBulkNewLabel(
+  appUserId: string,
+  labelDetails: NewLabelReq[]
+) {
+  const finalLabelDetails = labelDetails?.map((label) => ({
+    ...label,
+    app_user_id: appUserId,
+  }));
+  const { data, error } = await supabase
+    .from("labels")
+    .insert(finalLabelDetails);
+
+  if (error) {
+    if (error.code === "23505") {
+      // Unique constraint violation
+      throw new Error(`Duplicate Labels.`);
+    }
+    throw new Error(error.message);
+  }
+
+  return { message: "Default Labels created successfully." };
 }
 
 export async function updateUserLabel(

@@ -17,6 +17,8 @@ router.get("/:emailId/labels", emailController.getEmailLabels);
 // GET /api/v1/emails/by-label/:labelId
 router.get("/by-label/:labelId", emailController.getEmailsByLabel);
 
+router.post("/by-label/:labelId", emailController.getSelectedEmailsByLabel);
+
 // IMPLEMENTED
 // GET /api/v1/emails?category=inbox&limit=20&page=1&accountId=xyz&starred=true&unread=true
 router.get(

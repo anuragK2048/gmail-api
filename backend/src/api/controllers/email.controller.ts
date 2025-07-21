@@ -6,7 +6,11 @@ import {
   fetchSingleEmailFromDb,
   syncEmailsForAccount,
 } from "../../services/email.service";
-import { getEmailsForLabel, getLabelsForEmail } from "../../database/emails.db";
+import {
+  getEmailsForLabel,
+  getLabelsForEmail,
+  getSelectedEmailsForLabel,
+} from "../../database/emails.db";
 
 const getEmailsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -152,3 +156,20 @@ export const getEmailsByLabel = async (
     next(error);
   }
 };
+
+export const getSelectedEmailsByLabel = asyncWrapper(
+  async (req: Request, res: Response) => {
+    const { labelId } = req.params;
+    const { emailAccountIds, page, limit } = req.body;
+    console.log(labelId, emailAccountIds, page, limit);
+    const { emails, hasNextPage, currentPage, nextPage } =
+      await getSelectedEmailsForLabel(labelId, emailAccountIds, page, limit);
+
+    res.status(200).json({
+      emails,
+      hasNextPage,
+      currentPage,
+      nextPage,
+    });
+  }
+);

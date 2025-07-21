@@ -90,3 +90,48 @@ export async function getEmailsForLabel(
   console.log(data);
   return data?.map((item: any) => item.emails) || [];
 }
+
+export const getSelectedEmailsForLabel = async (
+  labelId: string,
+  emailAccountIds: string[],
+  page: number,
+  limit: number
+) => {
+  // const temp = "39f46846-1997-4f49-bc29-30acdd77063c";
+  const offset = limit * (page - 1);
+  const {
+    data: emails,
+    error,
+    count,
+  } = await supabase
+    .from("email_labels")
+    .select(
+      `
+    emails!inner(
+      *
+    )
+  `,
+      {
+        count: "exact", // This enables counting total matching rows
+        head: false, // Ensures data is still returned
+      }
+    )
+    .eq("label_id", labelId)
+    .in("emails.gmail_account_id", emailAccountIds)
+    .order("received_date", { foreignTable: "emails", ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    throw new Error("Unable to fetch selective emails by label from DB");
+  }
+
+  console.log(emails.length);
+
+  const hasNextPage = page * limit < count;
+  return {
+    emails: emails?.map((val: any) => val.emails),
+    hasNextPage,
+    currentPage: page,
+    nextPage: hasNextPage ? page + 1 : null,
+  };
+};

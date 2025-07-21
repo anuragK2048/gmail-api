@@ -24,6 +24,7 @@
     "express-session": "^1.18.1",
     "googleapis": "^148.0.0",
     "helmet": "^8.1.0",
+    "html-to-text": "^9.0.5",
     "i": "^0.3.7",
     "morgan": "^1.10.0",
     "npm": "^11.3.0",
@@ -33,9 +34,13 @@
     "zod": "^3.25.21"
   },
   "devDependencies": {
+    "@types/babel__core": "^7.20.5",
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__template": "^7.4.4",
     "@types/cors": "^2.8.18",
     "@types/express": "^5.0.2",
     "@types/express-session": "^1.18.1",
+    "@types/html-to-text": "^9.0.4",
     "@types/lodash": "^4.17.16",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.15.18",

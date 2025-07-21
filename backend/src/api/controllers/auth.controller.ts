@@ -5,7 +5,7 @@ import {
   validateUser,
 } from "../../services/auth.service";
 import { createUser } from "../../database/users.db";
-import { FRONTEND_URL, NODE_ENV } from "../../config";
+import { FRONTEND_URL, newUserDefaults, NODE_ENV } from "../../config";
 import { GmailAccount, NewGmailAccountPayload } from "../../types/gmail.types";
 import { NewUserAccountPayload, User } from "../../types/user.types";
 import {
@@ -20,6 +20,8 @@ import {
   InternalServerError,
   UnauthorizedError,
 } from "../../errors/specificErrors";
+import { syncEmailsForAccount } from "../../services/email.service";
+import { createBulkNewLabel } from "../../database/labels.db";
 
 // When new user clicks sign in
 export const redirectToGoogle = async (req: Request, res: Response) => {
@@ -108,15 +110,20 @@ export const handleGoogleCallback = asyncWrapper(
           if (err) console.error("🔴 Error in saving session");
         });
         delete req.session.oauthFlowContent;
+
+        // Syncing emails
+        syncEmailsForAccount(userData.id, gmailAccountData.id, 50);
+
         res.redirect(FRONTEND_URL + `/inbox`);
       }
     } else if (
       req.session.userId &&
       req.session.oauthFlowContent.action == "link_new_gmail_account"
     ) {
+      const appUserId = req.session.userId;
       const newGmailDetails: NewGmailAccountPayload = {
         gmail_name: full_name,
-        app_user_id: req.session.userId,
+        app_user_id: appUserId,
         google_user_id_for_account: google_id,
         gmail_address: new_email,
         refresh_token_encrypted,
@@ -131,6 +138,15 @@ export const handleGoogleCallback = asyncWrapper(
         newGmailDetails
       );
       delete req.session.oauthFlowContent;
+
+      // Add default labels
+      void createBulkNewLabel(appUserId, newUserDefaults.defaultLabels).then(
+        () => syncEmailsForAccount(appUserId, gmailAccountData.id, 50)
+      );
+
+      // // Syncing emails
+      // syncEmailsForAccount(appUserId, gmailAccountData.id, 50);
+
       res.redirect(FRONTEND_URL + `/inbox`);
     }
     // res.redirect(FRONTEND_URL + "-error");

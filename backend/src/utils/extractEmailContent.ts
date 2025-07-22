@@ -38,7 +38,10 @@ export function preprocessEmailForLLM(email: any): {
     `From: ${email.from_name || ""} <${email.from_address || ""}>`,
     `Snippet: ${email.snippet || ""}`,
     `Body: ${bodyText.replace(/\s+/g, " ").trim()}`,
+    `reference_labels: ${JSON.stringify(email.label_ids)}`,
   ].join("\n---\n"); // Use a clear separator
+
+  console.log("Email content passed to llm:", combinedContent);
 
   return {
     id: email.id,

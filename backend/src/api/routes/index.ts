@@ -7,6 +7,9 @@ import labelRouter from "./label.routes";
 
 const router: Router = express.Router();
 
+router.get("/", (req, res) => {
+  res.status(200).json({ result: "API is ready" });
+});
 router.use("/auth", authRouter);
 router.use("/users", userRouter);
 router.use("/gmail-accounts", gmailAccountRouter);

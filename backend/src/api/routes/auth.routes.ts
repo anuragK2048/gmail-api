@@ -4,6 +4,10 @@ import { isAuthenticated } from "../../middleware/isAuthenticated";
 
 const router: Router = express.Router();
 
+// test route
+// http://localhost:3000/api/v1/auth/test
+router.get("/test", authController.testRoute);
+
 // Route to initiate Google OAuth flow
 // GET /api/v1/auth/google
 router.get("/google", authController.redirectToGoogle);

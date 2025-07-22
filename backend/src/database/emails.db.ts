@@ -108,12 +108,15 @@ export const getSelectedEmailsForLabel = async (
     .select(
       `
     emails!inner(
-      *
+      *,
+      gmail_account:gmail_account_id(
+        gmail_address
+      )
     )
   `,
       {
-        count: "exact", // This enables counting total matching rows
-        head: false, // Ensures data is still returned
+        count: "exact",
+        head: false,
       }
     )
     .eq("label_id", labelId)

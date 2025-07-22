@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { asyncWrapper } from "../../middleware/asyncWrapper";
 import { z } from "zod";
 import {
+  // fetchEmails,
   fetchEmailsFromDb,
   fetchSingleEmailFromDb,
   syncEmailsForAccount,
@@ -20,23 +21,23 @@ const getEmailsQuerySchema = z.object({
   isUnread: z.preprocess((val) => val === "true", z.boolean()).optional(),
 });
 
-export const getEmails = asyncWrapper(async (req: Request, res: Response) => {
-  const appUserId = req.session.userId!; // Assumes isAuthenticated middleware has run
-  const { accountId } = req.params;
-  if (!accountId) {
-    return res.status(400).json({ message: "Account ID is required" });
-  }
-  // Validate query parameters
-  const queryParams = getEmailsQuerySchema.parse(req.query);
+// export const getEmails = asyncWrapper(async (req: Request, res: Response) => {
+//   const appUserId = req.session.userId!; // Assumes isAuthenticated middleware has run
+//   const { accountId } = req.params;
+//   if (!accountId) {
+//     return res.status(400).json({ message: "Account ID is required" });
+//   }
+//   // Validate query parameters
+//   const queryParams = getEmailsQuerySchema.parse(req.query);
 
-  const emails = await fetchEmailsFromDb({
-    appUserId,
-    accountId,
-    ...queryParams,
-  });
+//   const emails = await fetchEmailsFromDb({
+//     appUserId,
+//     accountId,
+//     ...queryParams,
+//   });
 
-  res.status(200).json(emails);
-});
+//   res.status(200).json(emails);
+// });
 
 /**
  * Handles the request to get full details for a single email.
@@ -157,19 +158,23 @@ export const getEmailsByLabel = async (
   }
 };
 
-export const getSelectedEmailsByLabel = asyncWrapper(
-  async (req: Request, res: Response) => {
-    const { labelId } = req.params;
-    const { emailAccountIds, page, limit } = req.body;
-    console.log(labelId, emailAccountIds, page, limit);
-    const { emails, hasNextPage, currentPage, nextPage } =
-      await getSelectedEmailsForLabel(labelId, emailAccountIds, page, limit);
-
-    res.status(200).json({
-      emails,
-      hasNextPage,
-      currentPage,
-      nextPage,
-    });
-  }
-);
+// export const getSelectedEmailsByLabel = asyncWrapper(
+//   async (req: Request, res: Response) => {
+//     const { labelId } = req.params;
+//     const { emailAccountIds, page, limit } = req.body;
+//     const appUserId = req.session.userId!;
+//     const { emails, hasNextPage, currentPage, nextPage } = await fetchEmails({
+//       userLabelId: labelId,
+//       emailAccountIds,
+//       page,
+//       limit,
+//       appUserId,
+//     });
+//     res.status(200).json({
+//       emails,
+//       hasNextPage,
+//       currentPage,
+//       nextPage,
+//     });
+//   }
+// );

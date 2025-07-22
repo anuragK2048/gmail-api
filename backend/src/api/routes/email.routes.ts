@@ -1,6 +1,9 @@
 import express, { Router } from "express";
 import * as emailController from "../controllers/email.controller";
+import * as emailListController from "../controllers/emailList.controller";
 import { isAuthenticated } from "../../middleware/isAuthenticated";
+import { validateRequest } from "../../middleware/validateRequest";
+import { getEmailsQuerySchema } from "../schemas/systemLabelReq.schemas";
 // import { validateRequest } from '../../middleware/validateRequest';
 // import { emailFetchSchema, emailActionSchema } from './schemas/email.schemas';
 
@@ -11,20 +14,26 @@ router.use(isAuthenticated);
 
 // --- Email Listing & Viewing ---
 
+// GET email list
+router.get("/inbox/all", emailListController.getAllInboxEmails);
+router.get("/inbox/other", emailListController.getOthersInboxEmails);
+router.get("/inbox/:labelId", emailListController.getInboxEmailsByLabel);
+router.get("/system/:systemLabelId", emailListController.getSystemLabelEmails);
+
 // GET /api/v1/emails/:emailId/labels
 router.get("/:emailId/labels", emailController.getEmailLabels);
 
 // GET /api/v1/emails/by-label/:labelId
 router.get("/by-label/:labelId", emailController.getEmailsByLabel);
 
-router.post("/by-label/:labelId", emailController.getSelectedEmailsByLabel);
+// router.post("/by-label/:labelId", emailController.getSelectedEmailsByLabel);
 
 // IMPLEMENTED
 // GET /api/v1/emails?category=inbox&limit=20&page=1&accountId=xyz&starred=true&unread=true
-router.get(
-  "/emailList/:accountId",
-  /* validateRequest(emailFetchSchema), */ emailController.getEmails
-);
+// router.get(
+//   "/emailList/:accountId",
+//   /* validateRequest(emailFetchSchema), */ emailController.getEmails
+// );
 // GET /api/v1/emails/:emailId (Get a single email by your app's internal ID)
 router.get("/:emailId", emailController.getSingleEmailDetails);
 

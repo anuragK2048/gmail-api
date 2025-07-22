@@ -8,7 +8,7 @@ import supabase from "../database/supabase";
 import { processAILabelsInBackground } from "../jobs/labelProcessWorker";
 import { getAuthenticatedGmailClients } from "./gmailApiService.provider";
 
-// We are not importing googleapis types due to heap memory issues.
+// USER LABELS
 
 // Minimal interfaces to define the shape of Google's objects for type safety
 interface GmailHeader {
@@ -36,7 +36,7 @@ interface GmailMessagePayload {
 interface GmailMessage {
   id?: string | null;
   threadId?: string | null;
-  label_ids?: (string | null)[] | null;
+  labelIds?: (string | null)[] | null;
   snippet?: string | null;
   internalDate?: string | null;
   payload?: GmailMessagePayload | null;
@@ -230,6 +230,15 @@ export async function syncEmailsForAccount(
     }
   }
 
+  const receivedEmails = successfullyUpsertedEmails.filter((email) => {
+    // Exclude emails with SENT/DRAFT labels
+    const hasExcludedLabels = email.label_ids?.some(
+      (labelId: any) => labelId === "SENT" || labelId === "DRAFT"
+    );
+    // Only keep emails without excluded labels
+    return !hasExcludedLabels;
+  });
+
   // Now, process the successfully saved emails
   if (successfullyUpsertedEmails.length > 0) {
     console.log(
@@ -239,7 +248,7 @@ export async function syncEmailsForAccount(
     // This can be a long process. For a production app, you would
     // add this to a background job queue (e.g., BullMQ).
     // For now, we'll call it directly but without blocking the main sync function's "completion".
-    processAILabelsInBackground(appUserId, successfullyUpsertedEmails);
+    processAILabelsInBackground(appUserId, receivedEmails);
   }
 }
 
@@ -248,7 +257,7 @@ export async function syncEmailsForAccount(
  * @param message - The message object, typed with our minimal interface.
  * @returns A structured ParsedEmailData object or null.
  */
-function parseGmailMessage(
+export function parseGmailMessage(
   message: GmailMessage,
   appUserId: string,
   gmailAccountId: string
@@ -296,7 +305,7 @@ function parseGmailMessage(
     }
   }
 
-  const label_ids = message.label_ids || [];
+  const label_ids = message.labelIds || [];
 
   return {
     gmail_account_id: gmailAccountId,
@@ -504,3 +513,177 @@ export async function fetchSingleEmailFromDb(
 //     }
 //   }
 // }
+
+// SYSTEM LABELS
+
+export interface GetEmailsOptions {
+  appUserId: string;
+  limit?: number;
+  page?: number;
+  emailAccountIds: string[];
+  systemView:
+    | "INBOX"
+    | "SPAM"
+    | "TRASH"
+    | "ARCHIVED"
+    | "ALL_MAIL"
+    | "SENT"
+    | "DRAFT"
+    | "STARRED"
+    | "IMPORTANT"
+    | "UNREAD"; // Define possible system views
+  userLabelId?: string; // For user-defined labels
+  inboxCategory?: "all" | "other" | "label";
+}
+
+export async function fetchEmailList(options: GetEmailsOptions) {
+  const {
+    appUserId,
+    emailAccountIds,
+    systemView,
+    limit = 20,
+    page = 1,
+    inboxCategory,
+    userLabelId,
+  } = options;
+  console.log(options);
+
+  const offset = (page - 1) * limit;
+  let query;
+  if (systemView === "INBOX") {
+    if (inboxCategory === "label") {
+      // Handle user-defined labels via a JOIN
+      query = supabase
+        .from("email_labels")
+        .select(
+          `
+    emails!inner(
+      *,
+      gmail_account:gmail_account_id(
+        gmail_address
+      )
+    )
+  `,
+          {
+            count: "exact",
+            head: false,
+          }
+        )
+        .eq("label_id", userLabelId)
+        .contains("emails.label_ids", ["INBOX"]) // Filter for emails in the Inbox
+        .in("emails.gmail_account_id", emailAccountIds)
+        .order("received_date", { foreignTable: "emails", ascending: false })
+        .range(offset, offset + limit - 1);
+    } else if (inboxCategory === "other") {
+      // Handle user-defined labels via a LEFT JOIN
+      query = supabase
+        .from("emails")
+        .select(
+          `*,gmail_account:gmail_account_id(
+        gmail_address
+      ),email_labels!left(label_id)`
+        )
+        .eq("app_user_id", appUserId) // Filter by the app user
+        .contains("label_ids", ["INBOX"]) // Filter for emails in the Inbox
+        .is("email_labels.label_id", null) // Filter for emails with no custom labels
+        .in("gmail_account_id", emailAccountIds)
+        .order("received_date", { ascending: false })
+        .range(offset, offset + limit - 1);
+    } else {
+      // inboxCateg === "all"
+      query = supabase
+        .from("emails")
+        .select(
+          `*,gmail_account:gmail_account_id(
+        gmail_address
+      )`
+        )
+        .eq("app_user_id", appUserId) // Filter by the app user
+        .contains("label_ids", ["INBOX"]) // Filter for emails in the Inbox
+        .in("gmail_account_id", emailAccountIds)
+        .order("received_date", { ascending: false })
+        .range(offset, offset + limit - 1);
+    }
+  } else {
+    // Handle system views
+    query = supabase
+      .from("emails")
+      .select(
+        `*,gmail_account:gmail_account_id(
+        gmail_address
+      )`,
+        { count: "exact" }
+      )
+      .eq("app_user_id", appUserId)
+      .order("received_date", { ascending: false })
+      .range(offset, offset + limit - 1)
+      .in("gmail_account_id", emailAccountIds);
+
+    // Apply filter based on the systemView parameter
+    switch (systemView) {
+      case "SPAM":
+        query = query.contains("label_ids", ["SPAM"]);
+        break;
+      case "TRASH":
+        query = query.contains("label_ids", ["TRASH"]);
+        break;
+      case "SENT":
+        query = query.contains("label_ids", ["SENT"]);
+        break;
+      case "DRAFT":
+        query = query.contains("label_ids", ["DRAFT"]);
+        break;
+      case "STARRED":
+        query = query.eq("is_starred", true);
+        break;
+      case "IMPORTANT":
+        query = query.eq("is_important", true);
+        break;
+      case "UNREAD":
+        query = query.eq("is_unread", true);
+        break;
+      case "ARCHIVED":
+        query = query
+          .not("label_ids", "cs", "{INBOX}")
+          .not("label_ids", "cs", "{TRASH}")
+          .not("label_ids", "cs", "{SPAM}")
+          .not("label_ids", "cs", "{SENT}")
+          .not("label_ids", "cs", "{DRAFT}");
+        break;
+      case "ALL_MAIL":
+        // Everything except SPAM and TRASH
+        query = query
+          .not("label_ids", "cs", "{TRASH}")
+          .not("label_ids", "cs", "{SPAM}");
+        break;
+      default:
+        // Default to INBOX if no view is specified
+        query = query.contains("label_ids", ["INBOX"]);
+    }
+  }
+
+  const { data: emails, error, count } = await query;
+
+  if (error) {
+    console.log("Error occured in fetchEmailList");
+    throw new Error(error);
+  }
+
+  // Shape the query result
+  let emailList;
+  if (emails[0]?.emails) {
+    emailList = emails?.map((val: any) => val.emails);
+  } else {
+    emailList = emails;
+  }
+
+  console.log(emails.length);
+
+  const hasNextPage = page * limit < count;
+  return {
+    emails: emailList,
+    hasNextPage,
+    currentPage: page,
+    nextPage: hasNextPage ? page + 1 : null,
+  };
+}

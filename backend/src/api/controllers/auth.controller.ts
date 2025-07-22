@@ -20,8 +20,12 @@ import {
   InternalServerError,
   UnauthorizedError,
 } from "../../errors/specificErrors";
-import { syncEmailsForAccount } from "../../services/email.service";
+import {
+  parseGmailMessage,
+  syncEmailsForAccount,
+} from "../../services/email.service";
 import { createBulkNewLabel } from "../../database/labels.db";
+import { getAuthenticatedGmailClients } from "../../services/gmailApiService.provider";
 
 // When new user clicks sign in
 export const redirectToGoogle = async (req: Request, res: Response) => {
@@ -111,8 +115,13 @@ export const handleGoogleCallback = asyncWrapper(
         });
         delete req.session.oauthFlowContent;
 
-        // Syncing emails
-        syncEmailsForAccount(userData.id, gmailAccountData.id, 50);
+        // Add default labels
+        void createBulkNewLabel(
+          userData.id,
+          newUserDefaults.defaultLabels
+        ).then(() =>
+          syncEmailsForAccount(userData.id, gmailAccountData.id, 50)
+        );
 
         res.redirect(FRONTEND_URL + `/inbox`);
       }
@@ -139,23 +148,13 @@ export const handleGoogleCallback = asyncWrapper(
       );
       delete req.session.oauthFlowContent;
 
-      // Add default labels
-      void createBulkNewLabel(appUserId, newUserDefaults.defaultLabels).then(
-        () => syncEmailsForAccount(appUserId, gmailAccountData.id, 50)
-      );
-
-      // // Syncing emails
-      // syncEmailsForAccount(appUserId, gmailAccountData.id, 50);
+      // Syncing emails
+      syncEmailsForAccount(appUserId, gmailAccountData.id, 5);
 
       res.redirect(FRONTEND_URL + `/inbox`);
     }
-    // res.redirect(FRONTEND_URL + "-error");
   }
 );
-
-// export const getAuthStatus = async (req: Request, res: Response) => {
-//   res.json({});
-// };
 
 export const logoutUser = async (req: Request, res: Response) => {
   const sessionCookieName = "connect.sid"; // Get name from session obj or default
@@ -194,3 +193,40 @@ export const initiateLinkGoogleAccount = (req: Request, res: Response) => {
   const authURL = generateGoogleOAuthURL(csrfToken);
   res.redirect(authURL);
 };
+
+export const testRoute = asyncWrapper(async (req: Request, res: Response) => {
+  const params = req.params;
+  const query = req.query;
+  const body = req.body;
+  if (params) console.log("params:", params);
+  if (query) console.log("query:", query);
+  if (body) console.log("body:", body);
+
+  const { gmail } = await getAuthenticatedGmailClients(
+    "3de0513d-675d-4c7b-aefc-0d13efad5e11",
+    "96d438c7-b0a9-4695-98b7-b599c71865d9"
+  );
+
+  gmail.users.messages
+    .get({
+      userId: "me",
+      id: "196644f21aee2019",
+      format: "full",
+    })
+    .then((email: any) => {
+      const res = parseGmailMessage(
+        email.data,
+        "3de0513d-675d-4c7b-aefc-0d13efad5e11",
+        "44271300-8751-43b0-ab6d-442e2adfe9c6"
+      );
+      console.log(res);
+      return res;
+    })
+    .then((detailResponse: any) => {
+      res.status(200).json(detailResponse);
+    })
+    .catch((err: any) => {
+      console.error("Error:", err);
+      res.status(500).json({ error: "Failed to fetch message" });
+    });
+});

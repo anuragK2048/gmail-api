@@ -576,19 +576,30 @@ export async function fetchEmailList(options: GetEmailsOptions) {
         .range(offset, offset + limit - 1);
     } else if (inboxCategory === "other") {
       // Handle user-defined labels via a LEFT JOIN
-      query = supabase
-        .from("emails")
-        .select(
-          `*,gmail_account:gmail_account_id(
-        gmail_address
-      ),email_labels!left(label_id)`
-        )
-        .eq("app_user_id", appUserId) // Filter by the app user
-        .contains("label_ids", ["INBOX"]) // Filter for emails in the Inbox
-        .is("email_labels.label_id", null) // Filter for emails with no custom labels
-        .in("gmail_account_id", emailAccountIds)
-        .order("received_date", { ascending: false })
-        .range(offset, offset + limit - 1);
+      const [dataResponse, countResponse] = await Promise.all([
+        supabase.rpc("get_paginated_unlabeled_inbox", {
+          p_app_user_id: appUserId,
+          p_account_ids: emailAccountIds,
+          p_limit: limit,
+          p_offset: offset,
+        }),
+        supabase.rpc("get_unlabeled_inbox_emails_count", {
+          p_app_user_id: appUserId,
+          p_account_ids: emailAccountIds,
+        }),
+      ]);
+      if (dataResponse.error) throw dataResponse.error;
+      if (countResponse.error) throw countResponse.error;
+
+      const emails = dataResponse.data.data || []; // The data is inside the 'data' property of the returned JSON
+      const totalCount = countResponse.data || 0;
+      const hasNextPage = page * limit < totalCount;
+      return {
+        emails: emails,
+        hasNextPage,
+        currentPage: page,
+        nextPage: hasNextPage ? page + 1 : null,
+      };
     } else {
       // inboxCateg === "all"
       query = supabase
@@ -596,7 +607,11 @@ export async function fetchEmailList(options: GetEmailsOptions) {
         .select(
           `*,gmail_account:gmail_account_id(
         gmail_address
-      )`
+      )`,
+          {
+            count: "exact",
+            head: false,
+          }
         )
         .eq("app_user_id", appUserId) // Filter by the app user
         .contains("label_ids", ["INBOX"]) // Filter for emails in the Inbox
@@ -663,8 +678,8 @@ export async function fetchEmailList(options: GetEmailsOptions) {
   }
 
   const { data: emails, error, count } = await query;
-
   if (error) {
+    console.log(JSON.stringify(error));
     console.log("Error occured in fetchEmailList");
     throw new Error(error);
   }
@@ -673,11 +688,11 @@ export async function fetchEmailList(options: GetEmailsOptions) {
   let emailList;
   if (emails[0]?.emails) {
     emailList = emails?.map((val: any) => val.emails);
+  } else if (inboxCategory === "other") {
+    emailList = emails.data;
   } else {
     emailList = emails;
   }
-
-  console.log(emails.length);
 
   const hasNextPage = page * limit < count;
   return {

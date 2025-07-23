@@ -56,6 +56,8 @@ router.post("/:emailId/star", emailController.starEmail);
 
 // DELETE /api/v1/emails/:emailId/star (Unstar an email)
 router.delete("/:emailId/star", emailController.unstarEmail);
+// DELETE /api/v1/emails/:emailId/star (Unstar an email)
+router.post("/:emailId/editLabels", emailController.editEmailLabels);
 
 // POST /api/v1/emails/:emailId/archive
 // router.post('/:emailId/archive', emailController.archiveEmail);

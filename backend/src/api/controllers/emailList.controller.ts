@@ -10,7 +10,7 @@ export const getAllInboxEmails = asyncWrapper(
   async (req: Request, res: Response) => {
     // const {emailAccountIds, page, limit} = req.query;
     const validatedQuery = getEmailsQuerySchema.parse(req.query);
-    console.log("getAllInboxEmails", validatedQuery);
+    // console.log("getAllInboxEmails", validatedQuery);
     // const { emailAccountIds, page, limit } = req.body;
     const appUserId = req.session.userId!;
     const { emails, hasNextPage, currentPage, nextPage } = await fetchEmailList(

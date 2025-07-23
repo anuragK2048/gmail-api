@@ -62,6 +62,8 @@ const processSyncJob = async (job: Job) => {
       { added: string[]; removed: string[] }
     >();
 
+    console.log(JSON.stringify(historyRecords));
+    console.log(historyRecords);
     historyRecords.forEach((record: any) => {
       // 1. Messages Added
       record.messagesAdded?.forEach((msg: any) => {

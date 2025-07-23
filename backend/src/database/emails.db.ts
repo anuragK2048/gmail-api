@@ -151,3 +151,19 @@ export const getBulkEmailsFromDB = async (appUserId: string, limit: number) => {
   if (error) throw new Error(error);
   return data;
 };
+
+// Helper to get Gmail-specific IDs from our internal email ID
+export async function getEmailGmailIds(
+  appUserId: string,
+  internalEmailId: string
+) {
+  const { data, error } = await supabase
+    .from("emails")
+    .select("gmail_message_id, gmail_account_id")
+    .eq("app_user_id", appUserId)
+    .eq("id", internalEmailId)
+    .single();
+
+  if (error) throw new Error("Email not found or permission denied.");
+  return data;
+}

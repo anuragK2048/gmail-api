@@ -16,5 +16,5 @@ export const GMAIL_SCOPES = [
   "openid", // <--- ESSENTIAL for ID Token
   "https://www.googleapis.com/auth/userinfo.email", // <--- For email in ID Token
   "https://www.googleapis.com/auth/userinfo.profile", // <--- For profile info in ID Token
-  "https://www.googleapis.com/auth/gmail.readonly", // Your existing Gmail scope
+  "https://www.googleapis.com/auth/gmail.modify",
 ];

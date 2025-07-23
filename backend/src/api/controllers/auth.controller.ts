@@ -122,7 +122,7 @@ export const handleGoogleCallback = asyncWrapper(
           userData.id,
           newUserDefaults.defaultLabels
         ).then(() =>
-          syncEmailsForAccount(userData.id, gmailAccountData.id, 50)
+          syncEmailsForAccount(userData.id, gmailAccountData.id, 10)
         );
 
         res.redirect(FRONTEND_URL + `/inbox`);
@@ -151,7 +151,7 @@ export const handleGoogleCallback = asyncWrapper(
       delete req.session.oauthFlowContent;
 
       // Syncing emails
-      syncEmailsForAccount(appUserId, gmailAccountData.id, 50);
+      syncEmailsForAccount(appUserId, gmailAccountData.id, 10);
 
       res.redirect(FRONTEND_URL + `/inbox`);
     }

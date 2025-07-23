@@ -7,6 +7,7 @@ import {
 import supabase from "../database/supabase";
 import { processAILabelsInBackground } from "../jobs/labelProcessWorker";
 import { getAuthenticatedGmailClients } from "./gmailApiService.provider";
+import { getEmailGmailIds } from "../database/emails.db";
 
 // USER LABELS
 
@@ -359,7 +360,6 @@ export async function fetchSingleEmailFromDb(
   appUserId: string,
   emailId: string
 ) {
-  console.log(emailId, "emailId");
   const { data, error } = await supabase
     .from("emails")
     .select("*") // Select all details for the single view
@@ -375,7 +375,6 @@ export async function fetchSingleEmailFromDb(
     console.error(`Error fetching single email (id: ${emailId}):`, error);
     throw new Error("Failed to fetch email details.");
   }
-  console.log(data);
 
   // TODO: You might also want to join and fetch ai_data here
   // e.g., const { data: aiData } = await supabase.from('ai_data').select('*').eq('email_id', emailId).single();
@@ -675,4 +674,73 @@ export async function upsertEmailsToDb(
 
   console.log(`Finished upserting ${allUpsertedData.length} total emails.`);
   return allUpsertedData;
+}
+
+/**
+ * A generic function to modify an email's labels in Gmail and update the local DB.
+ * @param appUserId - The app's user ID.
+ * @param internalEmailId - The email's UUID in your DB.
+ * @param addLabelIds - Array of Gmail label IDs to add (e.g., ['STARRED']).
+ * @param removeLabelIds - Array of Gmail label IDs to remove (e.g., ['UNREAD']).
+ */
+export async function modifyEmailLabels(
+  appUserId: string,
+  internalEmailId: string,
+  addLabelIds: string[] = [],
+  removeLabelIds: string[] = []
+) {
+  // 1. Get the necessary IDs from our DB
+  const { gmail_message_id, gmail_account_id } = await getEmailGmailIds(
+    appUserId,
+    internalEmailId
+  );
+
+  // 2. Get an authenticated Gmail client for the correct account
+  const { gmail } = await getAuthenticatedGmailClients(
+    appUserId,
+    gmail_account_id
+  );
+
+  // 3. Perform the action on the Gmail API
+  await gmail.users.messages.modify({
+    userId: "me",
+    id: gmail_message_id,
+    requestBody: {
+      addLabelIds,
+      removeLabelIds,
+    },
+  });
+
+  // 4. Update YOUR local database immediately
+  // This part is a bit tricky, but we can do it with a DB function or by fetching/updating.
+  // Let's do a fetch then update for clarity.
+  const { data: currentEmail, error: fetchError } = await supabase
+    .from("emails")
+    .select("label_ids")
+    .eq("id", internalEmailId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  // Calculate the new set of labels
+  const currentLabels = new Set(currentEmail.label_ids || []);
+  addLabelIds.forEach((label) => currentLabels.add(label));
+  removeLabelIds.forEach((label) => currentLabels.delete(label));
+  const newLabelIds = Array.from(currentLabels);
+
+  // Update the DB record with the new state
+  const { data: updatedEmail, error: updateError } = await supabase
+    .from("emails")
+    .update({
+      label_ids: newLabelIds,
+      is_starred: newLabelIds.includes("STARRED"),
+      is_unread: newLabelIds.includes("UNREAD"),
+    })
+    .eq("id", internalEmailId)
+    .select("*") // Select the full updated record to return to the frontend
+    .single();
+
+  if (updateError) throw updateError;
+
+  return updatedEmail;
 }

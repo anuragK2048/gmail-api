@@ -3,6 +3,7 @@ import { asyncWrapper } from "../../middleware/asyncWrapper";
 import { z } from "zod";
 import {
   fetchSingleEmailFromDb,
+  modifyEmailLabels,
   syncEmailsForAccount,
 } from "../../services/email.service";
 import {
@@ -38,20 +39,88 @@ export const getSingleEmailDetails = asyncWrapper(
   }
 );
 
-export const markEmailAsRead = async (req: Request, res: Response) => {
-  res.json({});
+// --- Mark as Read ---
+export const markEmailAsRead = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const appUserId = req.session.userId!;
+    const { emailId } = req.params;
+    const updatedEmail = await modifyEmailLabels(
+      appUserId,
+      emailId,
+      [],
+      ["UNREAD"]
+    );
+    res.status(200).json(updatedEmail);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const markEmailAsUnread = async (req: Request, res: Response) => {
-  res.json({});
+// --- Mark as Unread ---
+export const markEmailAsUnread = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const appUserId = req.session.userId!;
+    const { emailId } = req.params;
+    const updatedEmail = await modifyEmailLabels(
+      appUserId,
+      emailId,
+      ["UNREAD"],
+      []
+    );
+    res.status(200).json(updatedEmail);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const starEmail = async (req: Request, res: Response) => {
-  res.json({});
+// --- Star Email ---
+export const starEmail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const appUserId = req.session.userId!;
+    const { emailId } = req.params;
+    const updatedEmail = await modifyEmailLabels(
+      appUserId,
+      emailId,
+      ["STARRED"],
+      []
+    );
+    res.status(200).json(updatedEmail);
+  } catch (error) {
+    next(error);
+  }
 };
 
-export const unstarEmail = async (req: Request, res: Response) => {
-  res.json({});
+// --- Unstar Email ---
+export const unstarEmail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const appUserId = req.session.userId!;
+    const { emailId } = req.params;
+    const updatedEmail = await modifyEmailLabels(
+      appUserId,
+      emailId,
+      [],
+      ["STARRED"]
+    );
+    res.status(200).json(updatedEmail);
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const getOverallSyncStatus = async (req: Request, res: Response) => {
@@ -155,3 +224,27 @@ export const getEmailsByLabel = async (
 //     });
 //   }
 // );
+
+export const editEmailLabels = asyncWrapper(
+  async (req: Request, res: Response) => {
+    console.log(req.body);
+    const appUserId = req.session.userId!;
+    const { emailId } = req.params;
+    const { addLabels, removeLabels } = req.body;
+    console.log(
+      "emailId:",
+      emailId,
+      " addLabels:",
+      addLabels,
+      " emoveLabels:",
+      removeLabels
+    );
+    const updatedEmail = await modifyEmailLabels(
+      appUserId,
+      emailId,
+      addLabels,
+      removeLabels
+    );
+    res.status(200).json(updatedEmail);
+  }
+);

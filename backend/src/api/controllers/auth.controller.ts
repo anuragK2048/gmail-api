@@ -11,6 +11,7 @@ import { NewUserAccountPayload, User } from "../../types/user.types";
 import {
   createEmailAccount,
   duplicateAccountCheck,
+  getLinkedAccountsForUser,
 } from "../../database/gmail_accounts.db";
 import { ValidatedUser } from "../../types/auth.types";
 import { asyncWrapper } from "../../middleware/asyncWrapper";
@@ -26,6 +27,7 @@ import {
 } from "../../services/email.service";
 import { createBulkNewLabel } from "../../database/labels.db";
 import { getAuthenticatedGmailClients } from "../../services/gmailApiService.provider";
+import { stopWatchForAccount } from "../../services/sync.service";
 
 // When new user clicks sign in
 export const redirectToGoogle = async (req: Request, res: Response) => {
@@ -158,6 +160,14 @@ export const handleGoogleCallback = asyncWrapper(
 
 export const logoutUser = async (req: Request, res: Response) => {
   const sessionCookieName = "connect.sid"; // Get name from session obj or default
+  const appUserId = req.session.userId!;
+  const linkedAccounts = await getLinkedAccountsForUser(appUserId);
+
+  // Stop the watch for all of them
+  const stopPromises = linkedAccounts.map((account) =>
+    stopWatchForAccount(appUserId, account.id)
+  );
+  await Promise.allSettled(stopPromises);
 
   req.session.destroy((err) => {
     if (err) {
@@ -203,21 +213,21 @@ export const testRoute = asyncWrapper(async (req: Request, res: Response) => {
   if (body) console.log("body:", body);
 
   const { gmail } = await getAuthenticatedGmailClients(
-    "3de0513d-675d-4c7b-aefc-0d13efad5e11",
-    "96d438c7-b0a9-4695-98b7-b599c71865d9"
+    "acfe9458-33e9-408b-b8c7-4a0aca534d58",
+    "718e4fac-8135-46b3-8f45-935a01c2ccb3"
   );
 
   gmail.users.messages
     .get({
       userId: "me",
-      id: "196644f21aee2019",
+      id: "15062927967891025",
       format: "full",
     })
     .then((email: any) => {
       const res = parseGmailMessage(
         email.data,
-        "3de0513d-675d-4c7b-aefc-0d13efad5e11",
-        "44271300-8751-43b0-ab6d-442e2adfe9c6"
+        "acfe9458-33e9-408b-b8c7-4a0aca534d58",
+        "718e4fac-8135-46b3-8f45-935a01c2ccb3"
       );
       console.log(res);
       return res;

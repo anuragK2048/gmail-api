@@ -98,10 +98,28 @@ export const getEncryptedRefreshToken = async (
     .single();
 
   if (error) {
+    console.error(error);
     throw new InternalServerError(
       "Unable get encrypted refresh token for this email from DB"
     );
   }
 
   return data;
+};
+
+export const getLinkedAccountsForUser = async (
+  appUserId: UUID
+): Promise<GmailAccountWithToken[]> => {
+  const { data, error } = await supabase
+    .from("gmail_accounts")
+    .select("id")
+    .eq("app_user_id", appUserId);
+
+  if (error) {
+    throw new InternalServerError(
+      "Failed to fetch Gmail accounts for token revocation."
+    );
+  }
+
+  return data || [];
 };

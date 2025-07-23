@@ -214,9 +214,7 @@ export async function syncEmailsForAccount(
         // Assuming 'batch' has the right keys for the DB
         onConflict: "gmail_account_id, gmail_message_id",
       })
-      .select(
-        "id, subject, from_name, from_address, snippet, body_plain_text, body_html"
-      ); // Select back the data you need for the next step
+      .select("*"); // Select back the data you need for the next step
 
     if (error) {
       console.error("Supabase batch upsert error:", error);
@@ -349,68 +347,6 @@ export interface GetEmailsOptions {
   isStarred?: boolean;
   isUnread?: boolean;
   accountId?: string; // Filter by a specific linked Gmail account
-}
-
-/**
- * Fetches a paginated list of emails from the database based on filter criteria.
- * @param options - The filtering and pagination options.
- * @returns A promise that resolves to an array of emails.
- */
-export async function fetchEmailsFromDb(options: GetEmailsOptions) {
-  const {
-    appUserId,
-    limit = EMAILS_PER_PAGE,
-    page = 1,
-    category,
-    isStarred,
-    isUnread,
-    accountId,
-  } = options;
-
-  // Start building the query
-  let query = supabase
-    .from("emails")
-    .select(
-      `
-      id,
-      gmail_account_id,
-      subject,
-      from_name,
-      snippet,
-      received_date,
-      is_unread,
-      is_starred,
-      has_attachments
-    `
-    ) // Select only the fields needed for the list view
-    .eq("app_user_id", appUserId) // **SECURITY: Always filter by the authenticated user!**
-    .eq("gmail_account_id", accountId)
-    .order("received_date", { ascending: false }); // Default sort by most recent
-
-  // Apply optional filters
-  if (category) {
-    query = query.eq("gmail_category_label_id", category);
-  }
-  if (isStarred !== undefined) {
-    query = query.eq("is_starred", isStarred);
-  }
-  if (isUnread !== undefined) {
-    query = query.eq("is_unread", isUnread);
-  }
-
-  // Apply pagination
-  const offset = (page - 1) * limit;
-  query = query.range(offset, offset + limit - 1);
-
-  // Execute the query
-  const { data, error } = await query;
-
-  if (error) {
-    console.error("Error fetching emails from DB:", error);
-    throw new Error("Failed to fetch emails.");
-  }
-
-  return data || [];
 }
 
 /**

@@ -138,3 +138,16 @@ export const getSelectedEmailsForLabel = async (
     nextPage: hasNextPage ? page + 1 : null,
   };
 };
+
+export const getBulkEmailsFromDB = async (appUserId: string, limit: number) => {
+  const { data, error } = await supabase
+    .from("emails")
+    .select(`*`)
+    .eq("app_user_id", appUserId)
+    .not("label_ids", "cs", "{SENT}")
+    .not("label_ids", "cs", "{DRAFT}")
+    .order("received_date", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error);
+  return data;
+};

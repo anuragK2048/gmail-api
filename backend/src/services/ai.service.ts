@@ -115,3 +115,85 @@ Example of the final output format:
     return new Map();
   }
 }
+
+export async function assignNewLabelInBatch_LLM(
+  emails: any[],
+  labelDetails: any
+) {
+  // 1. Preprocess inputs
+  const preprocessedEmails: PreprocessedEmail[] = emails.map(
+    preprocessEmailForLLM
+  );
+
+  // 2. Construct the prompt
+  const promptTemplate = `You are an expert AI assistant tasked with classifying a batch of emails based on a given label. Your goal is to provide a consistent and accurate JSON response.
+
+Here are the label. Label has a name and may have a specific instruction/criteria. If criteria are provided, prioritize them. If not, infer the category of email if it belongs to this label or not.
+
+<LABELS>
+{{LABELS_JSON}}
+</LABELS>
+
+Here is a batch of emails that need to be classified.
+
+<EMAILS>
+{{EMAILS_JSON}}
+</EMAILS>
+
+For each email, perform the following steps:
+1.  Read the email's content carefully.
+2.  Evaluate if the email matches the label's name and criteria.
+3.  Think step-by-step about your reasoning for label assignment for that email.
+4.  Represent your answer in boolean, make JSON with emailId and applicable(boolean), do it in the exact same order as the emails are provided.
+
+After analyzing all emails, provide your final answer ONLY as a single, valid JSON object. The JSON object should have a single key <classifications>. The value should be an array of objects, where each object contains the <emailId> and its corresponding boolean <assignment>.
+
+Example of the final output format:
+<OUTPUT_FORMAT>
+{
+  "classifications": [
+    {
+      "emailId": "email_id_1",
+      "applicable": true
+    },
+    {
+      "emailId": "email_id_2",
+      "applicable": false
+    }
+  ]
+}
+</OUTPUT_FORMAT>
+
+  Do not include your reasoning or any other text outside of the final JSON object. Begin your analysis now.`;
+
+  const finalPrompt = promptTemplate
+    .replace("{{LABELS_JSON}}", JSON.stringify(labelDetails, null, 2))
+    .replace("{{EMAILS_JSON}}", JSON.stringify(preprocessedEmails, null, 2));
+
+  // 3. Call the LLM API
+  const llmResponseString: any = await askGemini(finalPrompt);
+
+  // 4. Parse and validate the response
+  try {
+    // The LLM might sometimes include markdown backticks around the JSON
+    const cleanJsonString = llmResponseString
+      .replace(/```json/g, "")
+      .replace(/```/g, "");
+    const parsedResponse = JSON.parse(cleanJsonString);
+
+    // Convert the array of objects into a Map for easy lookup
+    const resultMap = new Map<string, boolean[]>();
+    for (const item of parsedResponse.classifications) {
+      // Basic validation
+      if (item.emailId && item.applicable) {
+        resultMap.set(item.emailId, item.applicable);
+      }
+    }
+    return resultMap;
+  } catch (error) {
+    console.error("Failed to parse LLM JSON response:", error);
+    console.error("Raw LLM Response:", llmResponseString);
+    // Return an empty map or throw an error so the calling function can handle it
+    return new Map();
+  }
+}

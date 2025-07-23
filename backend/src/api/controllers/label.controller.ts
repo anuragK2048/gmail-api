@@ -1,6 +1,7 @@
 // src/api/controllers/label.controller.ts
 import { Request, Response, NextFunction } from "express";
 import * as labelDbOperations from "../../database/labels.db";
+import { assignEmailsForNewLabel } from "../../jobs/labelProcessWorker";
 
 // --- Label Definition CRUD ---
 
@@ -35,13 +36,16 @@ export const createLabel = async (
 ) => {
   try {
     const appUserId = req.session.userId!;
-    console.log(req.body);
-    const { name, color } = req.body;
+    const { name, color, prompt } = req.body;
     const newLabel = await labelDbOperations.createNewLabel(
       appUserId,
       name,
-      color
+      color,
+      prompt
     );
+
+    assignEmailsForNewLabel(appUserId, newLabel, 50);
+
     res.status(201).json(newLabel);
   } catch (error) {
     next(error);

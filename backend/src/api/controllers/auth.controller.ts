@@ -151,7 +151,7 @@ export const handleGoogleCallback = asyncWrapper(
       delete req.session.oauthFlowContent;
 
       // Syncing emails
-      syncEmailsForAccount(appUserId, gmailAccountData.id, 5);
+      syncEmailsForAccount(appUserId, gmailAccountData.id, 2);
 
       res.redirect(FRONTEND_URL + `/inbox`);
     }

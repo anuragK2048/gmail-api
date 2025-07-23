@@ -19,7 +19,7 @@ export function preprocessEmailForLLM(email: any): {
     bodyText = htmlToText(email.body_html, {
       wordwrap: 120, // Helps with readability of the raw text
       selectors: [
-        // { selector: 'a', options: { ignoreHref: true } }, // Removes URLs
+        { selector: "a", options: { ignoreHref: true } }, // Removes URLs
         { selector: "img", format: "skip" }, // Completely remove images
       ],
     });
@@ -32,6 +32,7 @@ export function preprocessEmailForLLM(email: any): {
     bodyText = bodyText.substring(0, MAX_BODY_LENGTH) + "...";
   }
 
+  console.log(email);
   // 3. Combine the most important metadata with the cleaned body
   const combinedContent = [
     `Subject: ${email.subject || "(no subject)"}`,

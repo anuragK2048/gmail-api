@@ -2,8 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import { asyncWrapper } from "../../middleware/asyncWrapper";
 import { z } from "zod";
 import {
-  // fetchEmails,
-  fetchEmailsFromDb,
   fetchSingleEmailFromDb,
   syncEmailsForAccount,
 } from "../../services/email.service";
@@ -21,27 +19,6 @@ const getEmailsQuerySchema = z.object({
   isUnread: z.preprocess((val) => val === "true", z.boolean()).optional(),
 });
 
-// export const getEmails = asyncWrapper(async (req: Request, res: Response) => {
-//   const appUserId = req.session.userId!; // Assumes isAuthenticated middleware has run
-//   const { accountId } = req.params;
-//   if (!accountId) {
-//     return res.status(400).json({ message: "Account ID is required" });
-//   }
-//   // Validate query parameters
-//   const queryParams = getEmailsQuerySchema.parse(req.query);
-
-//   const emails = await fetchEmailsFromDb({
-//     appUserId,
-//     accountId,
-//     ...queryParams,
-//   });
-
-//   res.status(200).json(emails);
-// });
-
-/**
- * Handles the request to get full details for a single email.
- */
 export const getSingleEmailDetails = asyncWrapper(
   async (req: Request, res: Response) => {
     const appUserId = req.session.userId!;

@@ -5,6 +5,7 @@ import { REDIS_URL } from "../config"; // Your Redis connection URL
 import { parseGmailMessage, upsertEmailsToDb } from "../services/email.service";
 import { getAuthenticatedGmailClients } from "../services/gmailApiService.provider";
 import supabase from "../database/supabase";
+import { processAILabelsInBackground } from "./labelProcessWorker";
 
 const workerOptions: WorkerOptions = {
   connection: REDIS_URL
@@ -24,11 +25,6 @@ const workerOptions: WorkerOptions = {
   },
 };
 
-// const redisConnection = {
-//   connection: REDIS_URL ? new URL(REDIS_URL) : undefined,
-// };
-
-// The main job processing function
 const processSyncJob = async (job: Job) => {
   const { appUserId, gmailAccountId, startHistoryId, newHistoryId } = job.data;
   console.log(
@@ -41,18 +37,16 @@ const processSyncJob = async (job: Job) => {
       gmailAccountId
     );
 
-    // 1. Use history.list to get all changes between the old and new history IDs
     const historyResponse = await gmail.users.history.list({
       userId: "me",
       startHistoryId: startHistoryId,
+      // You can specify historyTypes to be more efficient, e.g., 'messageAdded', 'labelAdded'
     });
 
     const historyRecords = historyResponse.data.history;
+    console.log(historyResponse.data.history);
     if (!historyRecords || historyRecords.length === 0) {
-      console.log(
-        `No new history found for job ${job.id}. Updating historyId.`
-      );
-      // Even if there are no messages, we update the history ID to the latest point
+      console.log(`No new history for job ${job.id}. Updating historyId.`);
       await supabase
         .from("gmail_accounts")
         .update({ last_sync_history_id: newHistoryId })
@@ -60,62 +54,132 @@ const processSyncJob = async (job: Job) => {
       return;
     }
 
-    // 2. Extract unique message IDs that were added
+    // --- Process Different History Types ---
     const addedMessageIds = new Set<string>();
+    const deletedMessageIds = new Set<string>();
+    const messagesWithLabelChanges = new Map<
+      string,
+      { added: string[]; removed: string[] }
+    >();
+
     historyRecords.forEach((record: any) => {
+      // 1. Messages Added
       record.messagesAdded?.forEach((msg: any) => {
-        if (msg.message?.id) {
-          addedMessageIds.add(msg.message.id);
+        if (msg.message?.id) addedMessageIds.add(msg.message.id);
+      });
+
+      // 2. Messages Deleted
+      record.messagesDeleted?.forEach((msg: any) => {
+        if (msg.message?.id) deletedMessageIds.add(msg.message.id);
+      });
+
+      // 3. Labels Added to a message
+      record.labelsAdded?.forEach((labelUpdate: any) => {
+        if (labelUpdate.message?.id) {
+          const changes = messagesWithLabelChanges.get(
+            labelUpdate.message.id
+          ) || { added: [], removed: [] };
+          changes.added.push(...(labelUpdate.labelIds || []));
+          messagesWithLabelChanges.set(labelUpdate.message.id, changes);
         }
       });
-      // You can also process messagesDeleted, labelsAdded, etc. here
+
+      // 4. Labels Removed from a message
+      record.labelsRemoved?.forEach((labelUpdate: any) => {
+        if (labelUpdate.message?.id) {
+          const changes = messagesWithLabelChanges.get(
+            labelUpdate.message.id
+          ) || { added: [], removed: [] };
+          changes.removed.push(...(labelUpdate.labelIds || []));
+          messagesWithLabelChanges.set(labelUpdate.message.id, changes);
+        }
+      });
     });
 
-    if (addedMessageIds.size === 0) {
+    // --- Execute Actions Based on a_i_labelsProcessed Changes ---
+
+    // A. Handle DELETED messages
+    if (deletedMessageIds.size > 0) {
       console.log(
-        `History records found for job ${job.id}, but no new messages. Updating historyId.`
+        `Job ${job.id}: Deleting ${deletedMessageIds.size} message(s) from local DB.`
       );
+      const idsToDelete = Array.from(deletedMessageIds);
+      // Delete from your DB where gmail_message_id is in the list
       await supabase
-        .from("gmail_accounts")
-        .update({ last_sync_history_id: newHistoryId })
-        .eq("id", gmailAccountId);
-      return;
+        .from("emails")
+        .delete()
+        .in("gmail_message_id", idsToDelete)
+        .eq("gmail_account_id", gmailAccountId);
     }
 
-    console.log(
-      `Job ${job.id}: Found ${addedMessageIds.size} new message(s) to fetch.`
-    );
-
-    // 3. Fetch, parse, and save these new messages
-    // We can reuse the concurrency logic from the initial sync
-    const newEmails = [];
-    for (const messageId of addedMessageIds) {
-      const detailResponse = await gmail.users.messages.get({
-        userId: "me",
-        id: messageId,
-        format: "full",
-      });
-      const parsed = parseGmailMessage(
-        detailResponse.data as any,
-        appUserId,
-        gmailAccountId
+    // B. Handle ADDED messages (fetch, parse, save)
+    if (addedMessageIds.size > 0) {
+      console.log(
+        `Job ${job.id}: Fetching ${addedMessageIds.size} new message(s).`
       );
-      if (parsed) newEmails.push(parsed);
+      const newEmails = [];
+      for (const messageId of addedMessageIds) {
+        const detailResponse = await gmail.users.messages.get({
+          userId: "me",
+          id: messageId,
+          format: "full",
+        });
+        const parsed = parseGmailMessage(
+          detailResponse.data as any,
+          appUserId,
+          gmailAccountId
+        );
+        if (parsed) newEmails.push(parsed);
+      }
+      if (newEmails.length > 0) {
+        const upsertedEmails = await upsertEmailsToDb(newEmails);
+        await processAILabelsInBackground(appUserId, upsertedEmails); // Trigger AI for new emails
+      }
     }
 
-    // You'd also call your AI labeling function here on `newEmails`
-    // await assignLabelsToEmails(appUserId, labels, newEmails);
+    // C. Handle LABEL CHANGES on existing messages
+    if (messagesWithLabelChanges.size > 0) {
+      console.log(
+        `Job ${job.id}: Processing label changes for ${messagesWithLabelChanges.size} message(s).`
+      );
+      for (const [messageId, changes] of messagesWithLabelChanges.entries()) {
+        // Fetch the current state of the email from your DB
+        const { data: currentEmail, error } = await supabase
+          .from("emails")
+          .select("id, label_ids, is_starred, is_unread") // Select current state
+          .eq("gmail_message_id", messageId)
+          .eq("gmail_account_id", gmailAccountId)
+          .single();
 
-    // 4. Update the DB
-    if (newEmails.length > 0) {
-      // The select() in upsertEmailsToDb returns data needed for AI processing
-      const upsertedEmailsForAI = await upsertEmailsToDb(newEmails);
+        if (error || !currentEmail) {
+          console.warn(
+            `Label change received for message ${messageId}, but not found in local DB. It might be an older email. Skipping.`
+          );
+          continue; // Skip if we don't have this email stored
+        }
 
-      // 5. Now you can trigger AI labeling on the successfully saved emails
-      // await assignLabelsToEmails(appUserId, userLabels, upsertedEmailsForAI);
+        // Update the label_ids array
+        let currentLabels = new Set(currentEmail.label_ids || []);
+        changes.added.forEach((label) => currentLabels.add(label));
+        changes.removed.forEach((label) => currentLabels.delete(label));
+        const newLabelIds = Array.from(currentLabels);
+
+        // Update your DB with the new state
+        await supabase
+          .from("emails")
+          .update({
+            label_ids: newLabelIds,
+            // Also update your convenient boolean flags
+            is_starred: newLabelIds.includes("STARRED"),
+            is_unread: newLabelIds.includes("UNREAD"),
+            // You can update category here too
+          })
+          .eq("id", currentEmail.id);
+      }
     }
 
-    // 5. CRITICAL: Update the last_sync_history_id to the new ID for the next sync
+    // --- Final Step ---
+    // CRITICAL: Update the last_sync_history_id to the new ID for the next sync
     await supabase
       .from("gmail_accounts")
       .update({ last_sync_history_id: newHistoryId })
@@ -124,7 +188,6 @@ const processSyncJob = async (job: Job) => {
     console.log(`Worker for job ${job.id} finished successfully.`);
   } catch (error) {
     console.error(`Worker for job ${job.id} failed:`, error);
-    // Let BullMQ handle retries based on its configuration
     throw error;
   }
 };

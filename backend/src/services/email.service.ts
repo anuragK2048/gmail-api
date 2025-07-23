@@ -702,3 +702,41 @@ export async function fetchEmailList(options: GetEmailsOptions) {
     nextPage: hasNextPage ? page + 1 : null,
   };
 }
+
+export async function upsertEmailsToDb(
+  emails: ParsedEmailData[],
+  batchSize: number = 25
+) {
+  if (!emails || emails.length === 0) {
+    return [];
+  }
+
+  const allUpsertedData = [];
+
+  for (let i = 0; i < emails.length; i += batchSize) {
+    const batch = emails.slice(i, i + batchSize);
+    console.log(`Upserting batch of ${batch.length} emails to DB...`);
+
+    const { data: upsertedData, error } = await supabase
+      .from("emails")
+      .upsert(batch, {
+        onConflict: "gmail_account_id, gmail_message_id", // Your unique constraint
+        ignoreDuplicates: false, // Ensure updates happen on conflict
+      })
+      .select("id, subject, from_name"); // Select back fields needed for subsequent steps (like AI labeling)
+
+    if (error) {
+      console.error("Supabase batch upsert error:", error);
+      // For production, you might want more granular error handling,
+      // like logging which specific batch failed. For now, we'll throw.
+      throw new Error(`Failed to upsert email batch: ${error.message}`);
+    }
+
+    if (upsertedData) {
+      allUpsertedData.push(...upsertedData);
+    }
+  }
+
+  console.log(`Finished upserting ${allUpsertedData.length} total emails.`);
+  return allUpsertedData;
+}

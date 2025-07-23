@@ -3,6 +3,8 @@ import { Request, Response, NextFunction } from "express";
 import { asyncWrapper } from "../../middleware/asyncWrapper";
 import { getLinkedAccountsForUser } from "../../database/gmail_accounts.db";
 import { startWatchForAccount } from "../../services/sync.service";
+import { gmailSyncQueue } from "../../jobs/queue.setup";
+import supabase from "../../database/supabase";
 // In a real app, you would import a function to add a job to your queue (e.g., BullMQ)
 // import { addGmailSyncJob } from '../../jobs/emailSync.queue';
 
@@ -39,13 +41,29 @@ export const handleGmailNotification = async (
       `Notification received for user: ${userEmailAddress}, New History ID: ${newHistoryId}`
     );
 
-    // // 5. Trigger your background sync logic.
-    // // This is the most important step for scalability.
-    // // DO NOT run the full sync here. Add a job to a queue.
-    // // The job will then fetch the user's last_sync_history_id from the DB
-    // // and call gmail.users.history.list() to get the actual changes.
-    // // await addGmailSyncJob({ emailAddress: userEmailAddress, newHistoryId: newHistoryId });
-    // console.log(`TODO: Add a background job to sync changes for ${userEmailAddress} starting from their last known history ID up to ${newHistoryId}.`);
+    // Find the user and account in our DB to get our internal IDs.
+    const { data: account, error } = await supabase
+      .from("gmail_accounts")
+      .select("id, app_user_id, last_sync_history_id")
+      .eq("gmail_address", userEmailAddress)
+      .single();
+
+    if (error || !account) {
+      console.error(
+        `Could not find a linked account for email: ${userEmailAddress}`
+      );
+      return;
+    }
+
+    // Add a job to the queue.
+    // 'sync-changes' is the name of this specific job type.
+    // The data object contains everything our worker will need.
+    await gmailSyncQueue.add("sync-changes", {
+      appUserId: account.app_user_id,
+      gmailAccountId: account.id,
+      startHistoryId: account.last_sync_history_id, // The last point we synced from
+      newHistoryId: newHistoryId, // The new point we need to sync to
+    });
   } catch (error) {
     console.error("Error in /gmail-webhook:", error);
     // We've already sent a 204 response, so we can only log the error server-side.

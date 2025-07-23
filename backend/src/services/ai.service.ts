@@ -1,8 +1,10 @@
 // import { preprocessEmailForLLM } from './utils/preprocess';
 // import { yourLLMProviderClient } from './llmProvider'; // The client for OpenAI, Anthropic, etc.
 
+import { response } from "express";
 import { preprocessEmailForLLM } from "../utils/extractEmailContent";
 import { askGemini } from "./LLM/askGoogle";
+import { parseLlmResponse } from "../utils/parse";
 
 interface LabelOption {
   name: string;
@@ -29,7 +31,8 @@ interface LLMAssignmentResponse {
  */
 export async function assignLabelsInBatch_LLM(
   emails: any[],
-  labels: any[]
+  labels: any[],
+  limit: number = 5
 ): Promise<Map<string, boolean[]>> {
   // 1. Preprocess inputs
   const labelOptions: LabelOption[] = labels.map((label) => ({
@@ -80,45 +83,68 @@ Example of the final output format:
 </OUTPUT_FORMAT>
 
   Do not include your reasoning or any other text outside of the final JSON object. Begin your analysis now.`;
-  const finalPrompt = promptTemplate
-    .replace("{{LABELS_JSON}}", JSON.stringify(labelOptions, null, 2))
-    .replace("{{EMAILS_JSON}}", JSON.stringify(preprocessedEmails, null, 2));
 
-  // 3. Call the LLM API
-  const llmResponseString: any = await askGemini(finalPrompt);
+  const totalEmails = preprocessedEmails.length;
 
-  // 4. Parse and validate the response
-  try {
-    // The LLM might sometimes include markdown backticks around the JSON
-    const cleanJsonString = llmResponseString
-      .replace(/```json/g, "")
-      .replace(/```/g, "");
-    const parsedResponse: LLMAssignmentResponse = JSON.parse(cleanJsonString);
-
-    // Convert the array of objects into a Map for easy lookup
-    const resultMap = new Map<string, boolean[]>();
-    for (const item of parsedResponse.classifications) {
-      // Basic validation
-      if (
-        item.emailId &&
-        Array.isArray(item.assignments) &&
-        item.assignments.length === labels.length
-      ) {
-        resultMap.set(item.emailId, item.assignments);
-      }
-    }
-    return resultMap;
-  } catch (error) {
-    console.error("Failed to parse LLM JSON response:", error);
-    console.error("Raw LLM Response:", llmResponseString);
-    // Return an empty map or throw an error so the calling function can handle it
-    return new Map();
+  const LLMQueries = [];
+  for (let i = 0; i < totalEmails; i += limit) {
+    const preprocessedEmailsChunks = preprocessedEmails.slice(i, i + limit);
+    const finalPrompt = promptTemplate
+      .replace("{{LABELS_JSON}}", JSON.stringify(labelOptions, null, 2))
+      .replace(
+        "{{EMAILS_JSON}}",
+        JSON.stringify(preprocessedEmailsChunks, null, 2)
+      );
+    LLMQueries.push(askGemini(finalPrompt));
   }
+
+  const responses = await Promise.allSettled(LLMQueries);
+
+  const resultMap = new Map<string, boolean[]>();
+  const labelsLength = labels.length;
+
+  for (const response of responses) {
+    if (response.status === "fulfilled" && response.value) {
+      try {
+        const parsedResponse = parseLlmResponse(response.value);
+
+        // Safely access classifications
+        const classifications = parsedResponse?.classifications;
+        if (!Array.isArray(classifications)) {
+          console.warn(
+            "LLM response is missing or has invalid 'classifications' array.",
+            parsedResponse
+          );
+          continue; // Skip this malformed response
+        }
+
+        for (const item of classifications) {
+          // Basic validation
+          if (
+            item.emailId &&
+            Array.isArray(item.assignments) &&
+            item.assignments.length === labelsLength
+          ) {
+            resultMap.set(item.emailId, item.assignments);
+          } else {
+            console.warn("Skipping malformed classification item:", item);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse LLM JSON response:", error);
+        console.error("Raw LLM Response that failed parsing:", response.value);
+      }
+    } else if (response.status === "rejected") {
+      console.error("An LLM API call failed:", response.reason);
+    }
+  }
+  return resultMap;
 }
 
 export async function assignNewLabelInBatch_LLM(
   emails: any[],
-  labelDetails: any
+  labelDetails: any,
+  limit: number = 5
 ) {
   // 1. Preprocess inputs
   const preprocessedEmails: PreprocessedEmail[] = emails.map(
@@ -166,34 +192,47 @@ Example of the final output format:
 
   Do not include your reasoning or any other text outside of the final JSON object. Begin your analysis now.`;
 
-  const finalPrompt = promptTemplate
-    .replace("{{LABELS_JSON}}", JSON.stringify(labelDetails, null, 2))
-    .replace("{{EMAILS_JSON}}", JSON.stringify(preprocessedEmails, null, 2));
-
-  // 3. Call the LLM API
-  const llmResponseString: any = await askGemini(finalPrompt);
-
-  // 4. Parse and validate the response
-  try {
-    // The LLM might sometimes include markdown backticks around the JSON
-    const cleanJsonString = llmResponseString
-      .replace(/```json/g, "")
-      .replace(/```/g, "");
-    const parsedResponse = JSON.parse(cleanJsonString);
-
-    // Convert the array of objects into a Map for easy lookup
-    const resultMap = new Map<string, boolean[]>();
-    for (const item of parsedResponse.classifications) {
-      // Basic validation
-      if (item.emailId && item.applicable) {
-        resultMap.set(item.emailId, item.applicable);
-      }
-    }
-    return resultMap;
-  } catch (error) {
-    console.error("Failed to parse LLM JSON response:", error);
-    console.error("Raw LLM Response:", llmResponseString);
-    // Return an empty map or throw an error so the calling function can handle it
-    return new Map();
+  const total = emails.length;
+  const preprocessedEmailsChunks = [];
+  for (let i = 0; i < total; i += limit) {
+    const emailsChunk = preprocessedEmails.slice(i, i + limit);
+    const finalPrompt: string = promptTemplate
+      .replace("{{LABELS_JSON}}", JSON.stringify(labelDetails, null, 2))
+      .replace("{{EMAILS_JSON}}", JSON.stringify(emailsChunk, null, 2));
+    preprocessedEmailsChunks.push(askGemini(finalPrompt));
   }
+
+  const responses = await Promise.allSettled(preprocessedEmailsChunks);
+
+  const resultMap = new Map<string, boolean[]>();
+
+  for (const response of responses) {
+    if (response.status === "fulfilled" && response.value) {
+      try {
+        const parsedResponse = parseLlmResponse(response.value);
+        // Safely access classifications
+        const classifications = parsedResponse?.classifications;
+        if (!Array.isArray(classifications)) {
+          console.warn(
+            "LLM response is missing or has invalid 'classifications' array.",
+            parsedResponse
+          );
+          continue; // Skip this malformed response
+        }
+        for (const item of parsedResponse.classifications) {
+          if (item.emailId && item.applicable) {
+            resultMap.set(item.emailId, item.applicable);
+          }
+        }
+      } catch (err) {
+        console.error("Error in parsing llm response");
+        // Return an empty map or throw an error so the calling function can handle it
+        return new Map();
+      }
+    } else {
+      console.log("An llm response failed");
+    }
+  }
+
+  return resultMap;
 }

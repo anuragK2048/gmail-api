@@ -142,37 +142,57 @@ const processSyncJob = async (job: Job) => {
       console.log(
         `Job ${job.id}: Processing label changes for ${messagesWithLabelChanges.size} message(s).`
       );
+
       for (const [messageId, changes] of messagesWithLabelChanges.entries()) {
-        // Fetch the current state of the email from your DB
         const { data: currentEmail, error } = await supabase
           .from("emails")
-          .select("id, label_ids, is_starred, is_unread") // Select current state
+          .select("id, label_ids, is_starred, is_unread")
           .eq("gmail_message_id", messageId)
           .eq("gmail_account_id", gmailAccountId)
           .single();
 
         if (error || !currentEmail) {
           console.warn(
-            `Label change received for message ${messageId}, but not found in local DB. It might be an older email. Skipping.`
+            `Label change for message ${messageId} received, but not in local DB. Skipping.`
           );
-          continue; // Skip if we don't have this email stored
+          continue;
         }
 
-        // Update the label_ids array
-        let currentLabels = new Set(currentEmail.label_ids || []);
+        // --- THE COMPARISON LOGIC ---
+
+        // 1. Calculate the new proposed state
+        const currentLabels = new Set(currentEmail.label_ids || []);
         changes.added.forEach((label) => currentLabels.add(label));
         changes.removed.forEach((label) => currentLabels.delete(label));
         const newLabelIds = Array.from(currentLabels);
+        const newIsStarred = newLabelIds.includes("STARRED");
+        const newIsUnread = newLabelIds.includes("UNREAD");
 
-        // Update your DB with the new state
+        // 2. Compare with the current state in the DB
+        // We check if the boolean flags are already what they should be.
+        // You could also do a more complex array comparison if needed, but flags are efficient.
+        const isStarredSame = currentEmail.is_starred === newIsStarred;
+        const isUnreadSame = currentEmail.is_unread === newIsUnread;
+        // You can add more checks here (e.g., for custom labels if you track them)
+
+        if (isStarredSame && isUnreadSame) {
+          // If the important states already match, we can ignore this update.
+          console.log(
+            `Job ${job.id}: Ignoring redundant label update for message ${messageId}. State already in sync.`
+          );
+          continue; // Move to the next message
+        }
+
+        // 3. If states are different, proceed with the update
+        console.log(
+          `Job ${job.id}: Applying label update for message ${messageId}.`
+        );
         await supabase
           .from("emails")
           .update({
             label_ids: newLabelIds,
-            // Also update your convenient boolean flags
-            is_starred: newLabelIds.includes("STARRED"),
-            is_unread: newLabelIds.includes("UNREAD"),
-            // You can update category here too
+            is_starred: newIsStarred,
+            is_unread: newIsUnread,
           })
           .eq("id", currentEmail.id);
       }

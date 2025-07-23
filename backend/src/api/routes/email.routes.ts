@@ -39,7 +39,7 @@ router.get("/:emailId", emailController.getSingleEmailDetails);
 
 // IMPLEMENTED
 // POST /api/v1/gmail-accounts/:accountId/sync
-router.post("/:accountId/sync", emailController.startAccountSync);
+// router.post("/:accountId/sync", emailController.startAccountSync); TODO
 
 // GET /api/v1/emails/threads/:threadId (Get all emails in a specific thread)
 // router.get('/threads/:threadId', emailController.getThreadDetails);

@@ -9,6 +9,6 @@ export async function askGemini(prompt: string) {
     contents: prompt,
   });
   const result = response.text;
-  console.log(result);
+  console.log("LLM responded");
   return result;
 }

@@ -32,7 +32,6 @@ export function preprocessEmailForLLM(email: any): {
     bodyText = bodyText.substring(0, MAX_BODY_LENGTH) + "...";
   }
 
-  console.log(email);
   // 3. Combine the most important metadata with the cleaned body
   const combinedContent = [
     `Subject: ${email.subject || "(no subject)"}`,
@@ -42,7 +41,7 @@ export function preprocessEmailForLLM(email: any): {
     `reference_labels: ${JSON.stringify(email.label_ids)}`,
   ].join("\n---\n"); // Use a clear separator
 
-  console.log("Email content passed to llm:", combinedContent);
+  // console.log("Email content passed to llm:", combinedContent);
 
   return {
     id: email.id,

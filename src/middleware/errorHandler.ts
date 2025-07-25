@@ -2,10 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { ApiError } from "../errors/apiError";
 import { FRONTEND_URL } from "../config";
 
-const OAUTH_CALLBACK_PATHS = [
-  "/api/v1/auth/google/callback",
-  // Add any other OAuth callback paths here
-];
+const OAUTH_CALLBACK_PATHS = ["/api/v1/auth/google/callback"];
 
 const errorHandler = (
   err: Error,

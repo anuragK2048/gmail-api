@@ -107,5 +107,5 @@ export const {
 
 export const CORS_ORIGINS =
   NODE_ENV === "production"
-    ? [FRONTEND_URL, "https://mailmind.com"]
+    ? [FRONTEND_URL, "http://localhost:5173"]
     : [FRONTEND_URL, "http://localhost:5173", "http://192.168.29.156:5173"];

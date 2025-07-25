@@ -8,6 +8,7 @@ import {
   SESSION_SECRET,
   FRONTEND_URL,
   connectToRedis,
+  CORS_ORIGINS,
 } from "./config";
 import { redisStore } from "./config";
 import apiRoutes from "./api/routes";
@@ -35,10 +36,11 @@ async function initializeApp() {
 
   //Core middleware
   const corsOptions = {
-    origin: FRONTEND_URL || true,
+    origin: CORS_ORIGINS,
     credentials: true,
   };
   app.use(cors(corsOptions));
+  app.set("trust proxy", 1);
 
   // Body parsing
   app.use(express.json({ limit: "10kb" })); // Adjust limit as needed
@@ -64,7 +66,7 @@ async function initializeApp() {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: NODE_ENV === "production",
+        secure: false,
         httpOnly: true,
         maxAge: 60 * 60 * 1000 * 3, // 1 hour
         sameSite: "lax", // Consider 'strict' if appropriate

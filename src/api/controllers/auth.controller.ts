@@ -45,6 +45,7 @@ export const redirectToGoogle = async (req: Request, res: Response) => {
 
 export const handleGoogleCallback = asyncWrapper(
   async (req: Request, res: Response) => {
+    console.log(req.session.oauthFlowContent);
     const { state, code } = req.query;
     if (
       !state ||

@@ -227,7 +227,6 @@ export const getEmailsByLabel = async (
 
 export const editEmailLabels = asyncWrapper(
   async (req: Request, res: Response) => {
-    console.log(req.body);
     const appUserId = req.session.userId!;
     const { emailId } = req.params;
     const { addLabels, removeLabels } = req.body;
@@ -248,3 +247,26 @@ export const editEmailLabels = asyncWrapper(
     res.status(200).json(updatedEmail);
   }
 );
+
+export const modifyEmailLabelsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const appUserId = req.session.userId!;
+    const { emailId } = req.params;
+    const { addLabelIds, removeLabelIds } = req.body;
+
+    const updatedEmail = await modifyEmailLabels(
+      appUserId,
+      emailId,
+      addLabelIds,
+      removeLabelIds
+    );
+
+    res.status(200).json(updatedEmail);
+  } catch (error) {
+    next(error);
+  }
+};

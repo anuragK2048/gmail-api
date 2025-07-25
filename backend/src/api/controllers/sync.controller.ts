@@ -73,14 +73,15 @@ export const handleGmailNotification = async (
 export const handleWatchStart = asyncWrapper(
   async (req: Request, res: Response) => {
     const appUserId = req.session.userId!;
-    // const emailAccounts = await getLinkedAccountsForUser(appUserId);
+    const emailAccounts = await getLinkedAccountsForUser(appUserId);
 
     // const startPromises = emailAccounts.map((account) =>
     //   startWatchForAccount(appUserId, account.id)
     // );
     // await Promise.allSettled(startPromises);
 
-    res.status(200).json({ message: "Currently disabled watching" });
-    // .json({ message: "Started watching for emails successfully" });
+    res
+      .status(200)
+      .json({ message: "Started watching for emails successfully" });
   }
 );

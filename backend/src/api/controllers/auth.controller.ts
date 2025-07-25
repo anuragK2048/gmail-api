@@ -74,10 +74,11 @@ export const handleGoogleCallback = asyncWrapper(
     // State verified
 
     const {
-      name: full_name,
+      fullName: full_name,
       email: new_email,
-      sub: google_id,
-      refresh_token: refresh_token_encrypted,
+      googleId: google_id,
+      refreshToken: refresh_token_encrypted,
+      avatarUrl,
     }: ValidatedUser = await validateUser(code);
     if (req.session.oauthFlowContent.action == "register_new_user/login") {
       // Check if this Google account (googleUser.sub) is already linked to ANY app_user
@@ -105,6 +106,7 @@ export const handleGoogleCallback = asyncWrapper(
           gmail_address: userData.primary_email,
           refresh_token_encrypted,
           type: "primary",
+          avatar_url: avatarUrl,
         };
         const gmailAccountData: GmailAccount = await createEmailAccount(
           newGmailDetails
@@ -122,7 +124,7 @@ export const handleGoogleCallback = asyncWrapper(
           userData.id,
           newUserDefaults.defaultLabels
         ).then(() =>
-          syncEmailsForAccount(userData.id, gmailAccountData.id, 10)
+          syncEmailsForAccount(userData.id, gmailAccountData.id, 20)
         );
 
         res.redirect(FRONTEND_URL + `/inbox`);
@@ -139,6 +141,7 @@ export const handleGoogleCallback = asyncWrapper(
         gmail_address: new_email,
         refresh_token_encrypted,
         type: "secondary",
+        avatar_url: avatarUrl,
       };
       // if (await duplicateAccountCheck(google_id)) {
       //      console.error(`${new_email} already exist with this user`);
@@ -151,7 +154,7 @@ export const handleGoogleCallback = asyncWrapper(
       delete req.session.oauthFlowContent;
 
       // Syncing emails
-      syncEmailsForAccount(appUserId, gmailAccountData.id, 10);
+      syncEmailsForAccount(appUserId, gmailAccountData.id, 20);
 
       res.redirect(FRONTEND_URL + `/inbox`);
     }

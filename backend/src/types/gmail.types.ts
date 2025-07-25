@@ -9,6 +9,7 @@ export interface NewGmailAccountPayload {
   refresh_token_encrypted: string;
   scopes_granted?: string[];
   type: string;
+  avatar_url: string | null;
 }
 
 export interface GmailAccount extends NewGmailAccountPayload {

@@ -495,7 +495,7 @@ export async function fetchEmailList(options: GetEmailsOptions) {
     emails!inner(
       *,
       gmail_account:gmail_account_id(
-        gmail_address
+        gmail_address, avatar_url, gmail_name, id
       )
     )
   `,
@@ -541,7 +541,7 @@ export async function fetchEmailList(options: GetEmailsOptions) {
         .from("emails")
         .select(
           `*,gmail_account:gmail_account_id(
-        gmail_address
+        gmail_address, avatar_url, gmail_name, id
       )`,
           {
             count: "exact",
@@ -560,7 +560,7 @@ export async function fetchEmailList(options: GetEmailsOptions) {
       .from("emails")
       .select(
         `*,gmail_account:gmail_account_id(
-        gmail_address
+        gmail_address, avatar_url, gmail_name, id
       )`,
         { count: "exact" }
       )

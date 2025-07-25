@@ -4,6 +4,10 @@ import * as emailListController from "../controllers/emailList.controller";
 import { isAuthenticated } from "../../middleware/isAuthenticated";
 import { validateRequest } from "../../middleware/validateRequest";
 import { getEmailsQuerySchema } from "../schemas/systemLabelReq.schemas";
+import {
+  emailIdParamSchema,
+  modifyLabelsSchema,
+} from "../schemas/email.schemas";
 // import { validateRequest } from '../../middleware/validateRequest';
 // import { emailFetchSchema, emailActionSchema } from './schemas/email.schemas';
 
@@ -58,6 +62,12 @@ router.post("/:emailId/star", emailController.starEmail);
 router.delete("/:emailId/star", emailController.unstarEmail);
 // DELETE /api/v1/emails/:emailId/star (Unstar an email)
 router.post("/:emailId/editLabels", emailController.editEmailLabels);
+
+router.patch(
+  "/:emailId/labels",
+  validateRequest({ params: emailIdParamSchema, body: modifyLabelsSchema }),
+  emailController.modifyEmailLabelsController
+);
 
 // POST /api/v1/emails/:emailId/archive
 // router.post('/:emailId/archive', emailController.archiveEmail);

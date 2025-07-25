@@ -35,7 +35,8 @@ export async function findUserWithLinkedAccounts(appUserId: string) {
         gmail_address,
         is_sync_active,
         last_sync_time,
-        type
+        type,
+        avatar_url
       )
     `
     )

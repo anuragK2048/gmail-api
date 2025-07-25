@@ -4,8 +4,9 @@ export type OAuthFlowAction =
   | "reauthenticate";
 
 export interface ValidatedUser {
-  name: string;
+  googleId: string;
   email: string;
-  sub: string;
-  refresh_token: string;
+  fullName: string | null;
+  avatarUrl: string | null;
+  refreshToken: string;
 }

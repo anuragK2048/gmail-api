@@ -28,14 +28,8 @@ export const duplicateAccountCheck = async (google_id: string) => {
     .from("gmail_accounts")
     .select("*")
     .eq("google_user_id_for_account", google_id)
-    .single(); // Optional: use .single() if you expect only 1 result
-  // if (error) {
-  //   console.error(error);
-  //   throw new BadRequestError(
-  //     "Unable to check duplicate accounts",
-  //     "DB_CHECK_ERROR"
-  //   );
-  // }
+    .single();
+
   if (data) {
     return data; // object
   } else return false;
@@ -54,6 +48,7 @@ export const getAllConnectedAccountTokenDetails = async (
       "Failed to fetch Gmail accounts for token revocation."
     );
   }
+  console.log(data);
 
   return data || [];
 };

@@ -70,8 +70,8 @@ async function initializeApp() {
         httpOnly: true,
         maxAge: 60 * 60 * 1000 * 3, // 1 hour
         sameSite: NODE_ENV == "production" ? "none" : "lax", // Consider 'strict' if appropriate
-        domain:
-          NODE_ENV === "production" ? "mailmindbeta.netlify.app" : undefined,
+        // domain:
+        //   NODE_ENV === "production" ? "mailmindbeta.netlify.app" : undefined,
       },
     })
   );

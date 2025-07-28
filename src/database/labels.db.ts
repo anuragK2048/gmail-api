@@ -196,12 +196,14 @@ export async function bulkAddLabelsToEmails(
   }
   // console.log("associations", associations);
   // --- Bulk Insert ---
+  console.log(associations);
   const { error } = await supabase.from("email_labels").insert(associations, {
     // Supabase's 'upsert' with 'ignoreDuplicates' is often simulated by 'insert'
     // with 'onConflict'. 'ignoreDuplicates' is simpler if available on insert directly,
     // but 'onConflict' is the standard PostgreSQL way.
     // We'll handle the duplicate error code manually for clarity.
   });
+
   if (error) {
     // Error code '23505' is a unique_violation. This is expected and OK if a user
     // tries to apply a label that's already there. We can safely ignore it.

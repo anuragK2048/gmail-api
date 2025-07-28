@@ -247,7 +247,7 @@ export async function syncEmailsForAccount(
     // This can be a long process. For a production app, you would
     // add this to a background job queue (e.g., BullMQ).
     // For now, we'll call it directly but without blocking the main sync function's "completion".
-    processAILabelsInBackground(appUserId, receivedEmails);
+    processAILabelsInBackground(appUserId, receivedEmails, gmailAccountId);
   }
 }
 

@@ -3,6 +3,7 @@ import {
   bulkAddLabelsToEmails,
   findLabelsByUserId,
 } from "../database/labels.db";
+import { setSyncStatus } from "../database/users.db";
 import {
   assignLabelsInBatch_LLM,
   assignNewLabelInBatch_LLM,
@@ -17,7 +18,8 @@ import {
  */
 export async function processAILabelsInBackground(
   appUserId: string,
-  emails: any[]
+  emails: any[],
+  gmailAccountId
 ) {
   const receivedEmails = emails.filter((email) => {
     // Exclude emails with SENT/DRAFT labels
@@ -59,6 +61,7 @@ export async function processAILabelsInBackground(
     if (emailLabelAssociations.length > 0) {
       console.log(`AI found ${emailLabelAssociations.length} labels to apply.`);
       await bulkAddLabelsToEmails(appUserId, emailLabelAssociations);
+      await setSyncStatus(gmailAccountId, false);
       console.log("Successfully applied AI-generated labels.");
     } else {
       console.log("AI processing complete. No new labels were applicable.");

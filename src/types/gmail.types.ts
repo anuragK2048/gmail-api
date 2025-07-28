@@ -10,6 +10,7 @@ export interface NewGmailAccountPayload {
   scopes_granted?: string[];
   type: string;
   avatar_url: string | null;
+  is_sync_active?: boolean;
 }
 
 export interface GmailAccount extends NewGmailAccountPayload {
@@ -17,7 +18,6 @@ export interface GmailAccount extends NewGmailAccountPayload {
   created_at: string;
   last_sync_time?: string;
   last_sync_history_id?: string;
-  is_sync_active?: boolean;
   sync_error_message?: string;
 }
 

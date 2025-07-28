@@ -62,3 +62,14 @@ export const deleteAppUser = async (userAppId: UUID) => {
     throw new InternalServerError("Unable to delete account from DB");
   }
 };
+
+export const setSyncStatus = async (gmailAccountId, value: boolean) => {
+  const { error } = await supabase
+    .from("gmail_accounts")
+    .update({ is_sync_active: value })
+    .eq("id", gmailAccountId);
+
+  if (error) {
+    console.error(`Unable to set sync status to ${value}`);
+  }
+};

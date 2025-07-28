@@ -66,11 +66,12 @@ async function initializeApp() {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: NODE_ENV == "development" ? false : true,
+        secure: NODE_ENV == "production",
         httpOnly: true,
         maxAge: 60 * 60 * 1000 * 3, // 1 hour
-        sameSite: NODE_ENV == "development" ? "lax" : "none", // Consider 'strict' if appropriate
-        domain: "mailmindbeta.netlify.app",
+        sameSite: NODE_ENV == "production" ? "none" : "lax", // Consider 'strict' if appropriate
+        domain:
+          NODE_ENV === "production" ? "mailmindbeta.netlify.app" : undefined,
       },
     })
   );

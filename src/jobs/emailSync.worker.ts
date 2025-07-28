@@ -135,7 +135,11 @@ const processSyncJob = async (job: Job) => {
       }
       if (newEmails.length > 0) {
         const upsertedEmails = await upsertEmailsToDb(newEmails);
-        await processAILabelsInBackground(appUserId, upsertedEmails); // Trigger AI for new emails
+        await processAILabelsInBackground(
+          appUserId,
+          upsertedEmails,
+          gmailAccountId
+        ); // Trigger AI for new emails
       }
     }
 

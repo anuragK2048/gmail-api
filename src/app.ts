@@ -66,10 +66,10 @@ async function initializeApp() {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: false,
+        secure: NODE_ENV == "development" ? false : true,
         httpOnly: true,
         maxAge: 60 * 60 * 1000 * 3, // 1 hour
-        sameSite: "lax", // Consider 'strict' if appropriate
+        sameSite: NODE_ENV == "development" ? "lax" : "none", // Consider 'strict' if appropriate
       },
     })
   );
